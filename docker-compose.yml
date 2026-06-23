@@ -1,0 +1,128 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: solca-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-solca_cloud}
+      POSTGRES_USER: ${POSTGRES_USER:-solca}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-solca123}
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./database/init:/docker-entrypoint-initdb.d:ro
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-solca} -d ${POSTGRES_DB:-solca_cloud}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: services/auth-service/Dockerfile
+    environment:
+      JWT_SECRET: ${JWT_SECRET:-solca-cloud-secret}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+    ports:
+      - "8000:8000"
+
+  patient-service:
+    build:
+      context: .
+      dockerfile: services/patient-service/Dockerfile
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://solca:solca123@postgres:5432/solca_cloud}
+      JWT_SECRET: ${JWT_SECRET:-solca-cloud-secret}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8001:8000"
+
+  consultation-service:
+    build:
+      context: .
+      dockerfile: services/consultation-service/Dockerfile
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://solca:solca123@postgres:5432/solca_cloud}
+      JWT_SECRET: ${JWT_SECRET:-solca-cloud-secret}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8002:8000"
+
+  lab-service:
+    build:
+      context: .
+      dockerfile: services/lab-service/Dockerfile
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://solca:solca123@postgres:5432/solca_cloud}
+      JWT_SECRET: ${JWT_SECRET:-solca-cloud-secret}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8003:8000"
+
+  imaging-service:
+    build:
+      context: .
+      dockerfile: services/imaging-service/Dockerfile
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://solca:solca123@postgres:5432/solca_cloud}
+      JWT_SECRET: ${JWT_SECRET:-solca-cloud-secret}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8004:8000"
+
+  repository-service:
+    build:
+      context: .
+      dockerfile: services/repository-service/Dockerfile
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://solca:solca123@postgres:5432/solca_cloud}
+      JWT_SECRET: ${JWT_SECRET:-solca-cloud-secret}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      PATIENT_SERVICE_URL: http://patient-service:8000
+      CONSULTATION_SERVICE_URL: http://consultation-service:8000
+      LAB_SERVICE_URL: http://lab-service:8000
+      IMAGING_SERVICE_URL: http://imaging-service:8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      patient-service:
+        condition: service_started
+      consultation-service:
+        condition: service_started
+      lab-service:
+        condition: service_started
+      imaging-service:
+        condition: service_started
+    ports:
+      - "8005:8000"
+
+  audit-service:
+    build:
+      context: .
+      dockerfile: services/audit-service/Dockerfile
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://solca:solca123@postgres:5432/solca_cloud}
+      JWT_SECRET: ${JWT_SECRET:-solca-cloud-secret}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8006:8000"
+
+volumes:
+  postgres-data:
+
