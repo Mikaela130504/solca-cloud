@@ -1,0 +1,123 @@
+import { useState } from "react";
+import Button from "../../components/common/Button.jsx";
+import Card from "../../components/common/Card.jsx";
+import Input from "../../components/common/Input.jsx";
+import Select from "../../components/common/Select.jsx";
+import Toast from "../../components/common/Toast.jsx";
+import useForm from "../../hooks/useForm.js";
+import { createPatient } from "../../services/patientService.js";
+import { BLOOD_TYPES, CIUDADES_ECUADOR, ECUADOR_PROVINCES, ESTADOS_CIVILES, SEGUROS_MEDICOS, SEXOS } from "../../utils/constants.js";
+import { calculateAge, isEmail, isNotFutureDate, isPhone, isValidEcuadorianCedula, onlyLetters, required, rule } from "../../utils/validators.js";
+
+const initialValues = {
+  cedula: "",
+  nombres: "",
+  apellidos: "",
+  fechaNacimiento: "",
+  sexo: "",
+  estadoCivil: "",
+  direccion: "",
+  provincia: "",
+  ciudad: "",
+  telefono: "",
+  correo: "",
+  contactoEmergencia: "",
+  seguro: "",
+  tipoSangre: "",
+  nacionalidad: "Ecuatoriana",
+  observaciones: "",
+};
+
+const rules = {
+  cedula: [rule(required, "La cédula es obligatoria."), rule(isValidEcuadorianCedula, "Ingrese una cédula ecuatoriana válida.")],
+  nombres: [rule(required, "Los nombres son obligatorios."), rule(onlyLetters, "Use solo letras en nombres.")],
+  apellidos: [rule(required, "Los apellidos son obligatorios."), rule(onlyLetters, "Use solo letras en apellidos.")],
+  fechaNacimiento: [
+    rule(required, "La fecha de nacimiento es obligatoria."),
+    rule(isNotFutureDate, "La fecha debe ser válida y no futura."),
+    rule((value) => calculateAge(value) >= 0, "La edad no puede ser negativa."),
+  ],
+  sexo: [rule(required, "Seleccione el sexo.")],
+  estadoCivil: [rule(required, "Seleccione el estado civil.")],
+  direccion: [rule(required, "La dirección es obligatoria.")],
+  provincia: [rule(required, "Seleccione la provincia.")],
+  ciudad: [rule(required, "La ciudad es obligatoria."), rule(onlyLetters, "Use solo letras en ciudad.")],
+  telefono: [rule(required, "El teléfono es obligatorio."), rule(isPhone, "El teléfono debe tener 10 dígitos numéricos.")],
+  correo: [rule(required, "El correo es obligatorio."), rule(isEmail, "Ingrese un correo válido.")],
+  contactoEmergencia: [rule(required, "El contacto de emergencia es obligatorio.")],
+  seguro: [rule(required, "El seguro es obligatorio.")],
+  tipoSangre: [rule(required, "Seleccione el tipo de sangre.")],
+  nacionalidad: [rule(required, "La nacionalidad es obligatoria."), rule(onlyLetters, "Use solo letras en nacionalidad.")],
+};
+
+export default function PatientMaster() {
+  const form = useForm(initialValues, rules);
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState("");
+  const age = calculateAge(form.values.fechaNacimiento);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (!form.validate()) return;
+    setSaving(true);
+    await createPatient({ ...form.values, edad: age });
+    setSaving(false);
+    setToast("Paciente maestro registrado correctamente.");
+    form.reset();
+  };
+
+  return (
+    <>
+      <div className="page-title">
+        <div>
+          <h1>Paciente Maestro</h1>
+          <p>Registro administrativo único para identificar al paciente en todas las sedes SOLCA.</p>
+        </div>
+      </div>
+
+      <Card title="Datos demográficos y contacto">
+        <form onSubmit={handleSubmit} noValidate>
+          <div className="form-section">
+            <div className="grid grid-3">
+              <Input label="Cédula ecuatoriana" name="cedula" value={form.values.cedula} onChange={form.handleChange} error={form.errors.cedula} maxLength="10" />
+              <Input label="Nombres" name="nombres" value={form.values.nombres} onChange={form.handleChange} error={form.errors.nombres} />
+              <Input label="Apellidos" name="apellidos" value={form.values.apellidos} onChange={form.handleChange} error={form.errors.apellidos} />
+              <Input label="Fecha de nacimiento" type="date" name="fechaNacimiento" value={form.values.fechaNacimiento} onChange={form.handleChange} error={form.errors.fechaNacimiento} hint={age !== null ? `Edad calculada: ${age} años` : ""} />
+              <Select label="Sexo" name="sexo" value={form.values.sexo} onChange={form.handleChange} error={form.errors.sexo} options={SEXOS} />
+              <Select label="Estado civil" name="estadoCivil" value={form.values.estadoCivil} onChange={form.handleChange} error={form.errors.estadoCivil} options={ESTADOS_CIVILES} />
+            </div>
+          </div>
+
+          <div className="form-section">
+            <div className="form-section-title">Ubicación y contacto</div>
+            <div className="grid grid-3">
+              <Input label="Dirección" name="direccion" value={form.values.direccion} onChange={form.handleChange} error={form.errors.direccion} />
+              <Select label="Provincia" name="provincia" value={form.values.provincia} onChange={form.handleChange} error={form.errors.provincia} options={ECUADOR_PROVINCES} />
+              <Select label="Ciudad" name="ciudad" value={form.values.ciudad} onChange={form.handleChange} error={form.errors.ciudad} options={CIUDADES_ECUADOR} />
+              <Input label="Teléfono" name="telefono" value={form.values.telefono} onChange={form.handleChange} error={form.errors.telefono} maxLength="10" />
+              <Input label="Correo" type="email" name="correo" value={form.values.correo} onChange={form.handleChange} error={form.errors.correo} />
+              <Input label="Contacto de emergencia" name="contactoEmergencia" value={form.values.contactoEmergencia} onChange={form.handleChange} error={form.errors.contactoEmergencia} />
+            </div>
+          </div>
+
+          <div className="form-section">
+            <div className="form-section-title">Cobertura y observaciones</div>
+            <div className="grid grid-3">
+              <Select label="Seguro" name="seguro" value={form.values.seguro} onChange={form.handleChange} error={form.errors.seguro} options={SEGUROS_MEDICOS} />
+              <Select label="Tipo de sangre" name="tipoSangre" value={form.values.tipoSangre} onChange={form.handleChange} error={form.errors.tipoSangre} options={BLOOD_TYPES} />
+              <Input label="Nacionalidad" name="nacionalidad" value={form.values.nacionalidad} onChange={form.handleChange} error={form.errors.nacionalidad} />
+            </div>
+            <Input label="Observaciones" type="textarea" name="observaciones" value={form.values.observaciones} onChange={form.handleChange} />
+          </div>
+
+          <div className="actions">
+            <Button variant="secondary" onClick={form.reset}>Limpiar</Button>
+            <Button type="submit" loading={saving}>Guardar paciente</Button>
+          </div>
+        </form>
+      </Card>
+
+      <Toast message={toast} onClose={() => setToast("")} />
+    </>
+  );
+}

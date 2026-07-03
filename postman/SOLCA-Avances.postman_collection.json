@@ -1,0 +1,126 @@
+{
+  "info": {
+    "name": "SOLCA Avances",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseAuth", "value": "http://localhost:8000" },
+    { "key": "basePacientes", "value": "http://localhost:8001" },
+    { "key": "baseConsultas", "value": "http://localhost:8002" },
+    { "key": "baseLaboratorio", "value": "http://localhost:8003" },
+    { "key": "baseImagenologia", "value": "http://localhost:8004" },
+    { "key": "baseRepositorio", "value": "http://localhost:8005" },
+    { "key": "token", "value": "" },
+    { "key": "idPacienteRegional", "value": "PAC-0000001" }
+  ],
+  "item": [
+    {
+      "name": "Login ADMIN",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseAuth}}/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"username\":\"admin\",\"password\":\"admin123\"}"
+        }
+      },
+      "event": [{
+        "listen": "test",
+        "script": {
+          "exec": [
+            "const json = pm.response.json();",
+            "pm.collectionVariables.set('token', json.token);"
+          ],
+          "type": "text/javascript"
+        }
+      }]
+    },
+    {
+      "name": "Crear paciente maestro",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": "{{basePacientes}}/pacientes",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"cedula\":\"1710034065\",\"nombres\":\"Paciente\",\"apellidos\":\"Entrega\",\"fechaNacimiento\":\"1980-05-10\",\"sexo\":\"Femenino\",\"estadoCivil\":\"Soltero/a\",\"direccion\":\"Dirección registrada\",\"provincia\":\"Pichincha\",\"ciudad\":\"Quito\",\"telefono\":\"0999999999\",\"correo\":\"paciente@solca.local\",\"contactoEmergencia\":\"Contacto registrado\",\"seguro\":\"IESS\",\"tipoSangre\":\"O+\",\"nacionalidad\":\"Ecuatoriana\",\"observaciones\":\"Registro para evidencia académica\",\"sede\":\"SOLCA Quito\"}"
+        }
+      },
+      "event": [{
+        "listen": "test",
+        "script": {
+          "exec": [
+            "const json = pm.response.json();",
+            "pm.collectionVariables.set('idPacienteRegional', json.idPacienteRegional);"
+          ],
+          "type": "text/javascript"
+        }
+      }]
+    },
+    {
+      "name": "Consultar paciente maestro",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{basePacientes}}/pacientes/{{idPacienteRegional}}"
+      }
+    },
+    {
+      "name": "Crear consulta clínica",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": "{{baseConsultas}}/consultas",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"cedula\":\"1710034065\",\"idPacienteRegional\":\"{{idPacienteRegional}}\",\"fecha\":\"2026-07-03\",\"sede\":\"SOLCA Quito\",\"medico\":\"Dra. Valeria Molina\",\"especialidad\":\"Oncología clínica\",\"tipoConsulta\":\"Control\",\"diagnostico\":\"Diagnóstico registrado\",\"tratamiento\":\"Tratamiento registrado\",\"motivo\":\"Control clínico\",\"evolucion\":\"Evolución registrada\"}"
+        }
+      }
+    },
+    {
+      "name": "Crear resultado laboratorio",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": "{{baseLaboratorio}}/laboratorios",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"cedula\":\"1710034065\",\"idPacienteRegional\":\"{{idPacienteRegional}}\",\"fecha\":\"2026-07-03\",\"sede\":\"SOLCA Quito\",\"medico\":\"Dra. Valeria Molina\",\"tipoExamen\":\"Hemograma completo\",\"resultado\":\"Resultado registrado\",\"observaciones\":\"Observación registrada\"}"
+        }
+      }
+    },
+    {
+      "name": "Crear estudio imagenología",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": "{{baseImagenologia}}/imagenologia",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"cedula\":\"1710034065\",\"idPacienteRegional\":\"{{idPacienteRegional}}\",\"fecha\":\"2026-07-03\",\"sede\":\"SOLCA Quito\",\"medico\":\"Dra. Valeria Molina\",\"tipoEstudio\":\"Tomografía\",\"formato\":\"DICOM\",\"url\":\"/data/archivos/estudio.dcm\",\"regionAnatomica\":\"Tórax\",\"resultado\":\"Informe registrado\",\"observaciones\":\"Observación registrada\"}"
+        }
+      }
+    },
+    {
+      "name": "Repositorio clínico integrado",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseRepositorio}}/repositorio/paciente/{{idPacienteRegional}}"
+      }
+    }
+  ]
+}

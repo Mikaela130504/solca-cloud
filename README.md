@@ -1,127 +1,57 @@
-# SOLCA Cloud - Proyecto Reto
+# SOLCA Cloud
 
-Implementacion practica de una arquitectura cloud basada en microservicios para integrar la informacion clinica de SOLCA Cuenca, SOLCA Quito y SOLCA Manabi.
+Proyecto práctico con frontend React y microservicios Spring Boot independientes para integrar información clínica regional.
 
-## Componentes
+## Servicios
 
-| Puerto | Servicio | Responsabilidad |
+| Puerto | Servicio | Base SQLite |
 | --- | --- | --- |
-| 8000 | auth-service | Login y generacion de JWT |
-| 8001 | patient-service | Paciente Maestro Regional e historias locales |
-| 8002 | consultation-service | Consultas clinicas |
-| 8003 | lab-service | Resultados de laboratorio |
-| 8004 | imaging-service | Estudios de imagenologia/PACS |
-| 8005 | repository-service | Vista clinica regional unificada |
-| 8006 | audit-service | Consulta de auditoria |
-| 5432 | postgres | Persistencia relacional PostgreSQL |
+| 8000 | auth-service | AuthDB.sqlite |
+| 8001 | paciente-maestro-regional | PacienteDB.sqlite |
+| 8002 | consulta-service | ConsultaDB.sqlite |
+| 8003 | lab-service | LaboratorioDB.sqlite |
+| 8004 | imaginologia-service | ImagenologiaDB.sqlite |
+| 8005 | repositorio-service | RepositorioDB.sqlite |
 
-La base usa esquemas PostgreSQL por dominio: `paciente`, `consulta`, `laboratorio`, `imagenologia` y `auditoria`.
+## Usuarios iniciales
 
-## Requisitos
+| Usuario | Contraseña | Rol |
+| --- | --- | --- |
+| admin | admin123 | ADMIN |
+| medico | medico123 | MEDICO |
+| laboratorio | lab123 | LABORATORIO |
 
-- Docker
-- Docker Compose
+## Ejecución
 
-## Ejecucion
-
-```bash
-cp .env.example .env
+```powershell
 docker compose up --build
 ```
 
-Cuando los contenedores esten activos, cada microservicio publica documentacion Swagger en:
+Frontend:
 
-- http://localhost:8000/docs
-- http://localhost:8001/docs
-- http://localhost:8002/docs
-- http://localhost:8003/docs
-- http://localhost:8004/docs
-- http://localhost:8005/docs
-- http://localhost:8006/docs
-
-## Usuarios de prueba
-
-| Usuario | Clave | Rol |
-| --- | --- | --- |
-| admin | admin123 | ADMIN |
-| dr.perez | medico123 | MEDICO |
-| lab.suarez | lab123 | LABORATORIO |
-
-## Flujo de prueba rapido
-
-1. Obtener token de medico:
-
-```bash
-curl -X POST http://localhost:8000/auth/login ^
-  -H "Content-Type: application/json" ^
-  -d "{\"username\":\"dr.perez\",\"password\":\"medico123\"}"
+```powershell
+cd frontend-solca
+npm install
+npm run dev
 ```
 
-2. Consultar la vista clinica regional con el token recibido:
+## Verificación
 
-```bash
-curl http://localhost:8005/repositorio/paciente/PAC-00001 ^
-  -H "Authorization: Bearer TU_TOKEN"
+```powershell
+cd frontend-solca
+npm run lint
+npm run build
 ```
 
-3. Obtener token de administrador y consultar auditoria:
+Para compilar cada microservicio sin Docker:
 
-```bash
-curl http://localhost:8006/auditoria ^
-  -H "Authorization: Bearer TOKEN_ADMIN"
+```powershell
+cd services/auth-service
+mvn -DskipTests package
 ```
 
-## Endpoints principales
+Repetir en cada carpeta de `services`.
 
-### Auth
+## Arquitectura
 
-- `POST /auth/login`
-
-### Paciente Maestro Regional
-
-- `POST /pacientes` requiere `ADMIN`
-- `GET /pacientes/{id}` requiere `ADMIN`, `MEDICO` o `LABORATORIO`
-- `GET /pacientes/cedula/{cedula}` requiere `ADMIN`, `MEDICO` o `LABORATORIO`
-
-### Consulta Clinica
-
-- `POST /consultas` requiere `MEDICO` o `ADMIN`
-- `GET /consultas/paciente/{id}` requiere `MEDICO` o `ADMIN`
-
-### Laboratorio
-
-- `POST /laboratorio` requiere `LABORATORIO` o `ADMIN`
-- `GET /laboratorio/paciente/{id}` requiere `MEDICO`, `LABORATORIO` o `ADMIN`
-
-### Imagenologia
-
-- `POST /imagenologia` requiere `MEDICO` o `ADMIN`
-- `GET /imagenologia/paciente/{id}` requiere `MEDICO` o `ADMIN`
-
-### Repositorio Clinico Regional
-
-- `GET /repositorio/paciente/{id}` requiere `MEDICO` o `ADMIN`
-
-### Auditoria
-
-- `GET /auditoria` requiere `ADMIN`
-- `GET /auditoria/paciente/{id}` requiere `ADMIN`
-
-## Estructura
-
-```text
-database/init/
-  01_schema.sql
-  02_seed.sql
-services/
-  auth-service/
-  patient-service/
-  consultation-service/
-  lab-service/
-  imaging-service/
-  repository-service/
-  audit-service/
-  shared/solca_common/
-docker-compose.yml
-```
-
+Cada microservicio tiene su propio proyecto Spring Boot, su API REST, su base SQLite y su tabla de auditoría. El Repositorio Clínico Regional no accede directamente a bases de datos clínicas; consume las APIs de pacientes, consultas, laboratorio e imagenología y devuelve una vista consolidada con la lista de servicios no disponibles cuando alguno falla.

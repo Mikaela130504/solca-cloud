@@ -1,0 +1,34 @@
+flowchart TB
+  Usuario["Personal médico / administrativo"] --> Frontend["Frontend React"]
+  Frontend --> Auth["Auth Service - JWT"]
+  Frontend --> Paciente["Paciente Maestro Regional"]
+  Frontend --> Consulta["Consulta Clínica"]
+  Frontend --> Laboratorio["Laboratorio Clínico"]
+  Frontend --> Imagenologia["Imagenología / PACS básico"]
+  Frontend --> Repositorio["Repositorio Clínico Regional"]
+
+  Paciente --> PacienteDB[("PacienteDB.sqlite")]
+  Consulta --> ConsultaDB[("ConsultaDB.sqlite")]
+  Laboratorio --> LaboratorioDB[("LaboratorioDB.sqlite")]
+  Imagenologia --> ImagenologiaDB[("ImagenologiaDB.sqlite")]
+  Repositorio --> APIs["APIs REST internas"]
+
+  APIs --> Paciente
+  APIs --> Consulta
+  APIs --> Laboratorio
+  APIs --> Imagenologia
+
+  subgraph Cloud["Infraestructura cloud propuesta"]
+    Docker["Contenedores Docker"]
+    DBaaS["DBaaS futuro"]
+    Storage["Storage cloud futuro"]
+  end
+
+  Docker --> Auth
+  Docker --> Paciente
+  Docker --> Consulta
+  Docker --> Laboratorio
+  Docker --> Imagenologia
+  Docker --> Repositorio
+  DBaaS -. migración futura .-> PacienteDB
+  Storage -. archivos DICOM/PDF .-> Imagenologia

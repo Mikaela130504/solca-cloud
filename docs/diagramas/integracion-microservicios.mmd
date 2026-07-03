@@ -1,0 +1,21 @@
+sequenceDiagram
+  participant F as Frontend React
+  participant A as Auth Service
+  participant R as Repositorio Clínico Regional
+  participant P as Paciente Maestro
+  participant C as Consulta Clínica
+  participant L as Laboratorio Clínico
+  participant I as Imagenología
+
+  F->>A: POST /auth/login
+  A-->>F: JWT
+  F->>R: GET /repositorio/paciente/{idPacienteRegional}
+  R->>P: GET /pacientes/{idPacienteRegional}
+  P-->>R: paciente
+  R->>C: GET /consultas/paciente/{idPacienteRegional}
+  C-->>R: consultas
+  R->>L: GET /laboratorios/paciente/{idPacienteRegional}
+  L-->>R: laboratorio
+  R->>I: GET /imagenologia/paciente/{idPacienteRegional}
+  I-->>R: imagenes
+  R-->>F: JSON consolidado
