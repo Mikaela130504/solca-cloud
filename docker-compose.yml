@@ -1,63 +1,95 @@
 services:
+  frontend-solca:
+    build:
+      context: ./frontend-solca
+      args:
+        VITE_AUTH_API_URL: ${VITE_AUTH_API_URL:-http://localhost:8000}
+        VITE_PATIENT_API_URL: ${VITE_PATIENT_API_URL:-http://localhost:8001}
+        VITE_CONSULTATION_API_URL: ${VITE_CONSULTATION_API_URL:-http://localhost:8002}
+        VITE_LABORATORY_API_URL: ${VITE_LABORATORY_API_URL:-http://localhost:8003}
+        VITE_IMAGING_API_URL: ${VITE_IMAGING_API_URL:-http://localhost:8004}
+        VITE_REPOSITORY_API_URL: ${VITE_REPOSITORY_API_URL:-http://localhost:8005}
+    ports:
+      - "80:80"
+    depends_on:
+      - auth-service
+      - paciente-maestro-regional
+      - consulta-service
+      - lab-service
+      - imaginologia-service
+      - repositorio-service
+    restart: unless-stopped
+
   auth-service:
     build:
       context: ./services/auth-service
     environment:
+      JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Xms64m -Xmx256m}
       JWT_SECRET: ${JWT_SECRET:-solca-cloud-secret-solca-cloud-secret-solca-cloud-secret}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
     volumes:
       - ./database/sqlite:/data
     ports:
       - "8000:8080"
+    restart: unless-stopped
 
   paciente-maestro-regional:
     build:
       context: ./services/paciente-maestro-regional
     environment:
+      JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Xms64m -Xmx256m}
       JWT_SECRET: ${JWT_SECRET:-solca-cloud-secret-solca-cloud-secret-solca-cloud-secret}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
     volumes:
       - ./database/sqlite:/data
     ports:
       - "8001:8080"
+    restart: unless-stopped
 
   consulta-service:
     build:
       context: ./services/consulta-service
     environment:
+      JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Xms64m -Xmx256m}
       JWT_SECRET: ${JWT_SECRET:-solca-cloud-secret-solca-cloud-secret-solca-cloud-secret}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
     volumes:
       - ./database/sqlite:/data
     ports:
       - "8002:8080"
+    restart: unless-stopped
 
   lab-service:
     build:
       context: ./services/lab-service
     environment:
+      JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Xms64m -Xmx256m}
       JWT_SECRET: ${JWT_SECRET:-solca-cloud-secret-solca-cloud-secret-solca-cloud-secret}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
     volumes:
       - ./database/sqlite:/data
     ports:
       - "8003:8080"
+    restart: unless-stopped
 
   imaginologia-service:
     build:
       context: ./services/imaginologia-service
     environment:
+      JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Xms64m -Xmx256m}
       JWT_SECRET: ${JWT_SECRET:-solca-cloud-secret-solca-cloud-secret-solca-cloud-secret}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
     volumes:
       - ./database/sqlite:/data
     ports:
       - "8004:8080"
+    restart: unless-stopped
 
   repositorio-service:
     build:
       context: ./services/repositorio-service
     environment:
+      JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Xms64m -Xmx256m}
       JWT_SECRET: ${JWT_SECRET:-solca-cloud-secret-solca-cloud-secret-solca-cloud-secret}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
       SERVICE_PACIENTES: http://paciente-maestro-regional:8080
@@ -73,3 +105,4 @@ services:
       - imaginologia-service
     ports:
       - "8005:8080"
+    restart: unless-stopped
