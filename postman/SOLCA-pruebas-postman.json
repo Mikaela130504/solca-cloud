@@ -1,6 +1,6 @@
 {
   "info": {
-    "name": "SOLCA Avances",
+    "name": "SOLCA",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -70,6 +70,21 @@
       }
     },
     {
+      "name": "Asociar historia clínica local",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": "{{basePacientes}}/pacientes/{{idPacienteRegional}}/historias-locales",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"sede\":\"SOLCA Quito\",\"identificadorHistoriaLocal\":\"HC-Q-2026-001\"}"
+        }
+      }
+    },
+    {
       "name": "Crear consulta clínica",
       "request": {
         "method": "POST",
@@ -120,6 +135,14 @@
         "method": "GET",
         "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
         "url": "{{baseRepositorio}}/repositorio/paciente/{{idPacienteRegional}}"
+      }
+    },
+    {
+      "name": "Auditoría del repositorio",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseRepositorio}}/repositorio-clinico/auditorias"
       }
     }
   ]

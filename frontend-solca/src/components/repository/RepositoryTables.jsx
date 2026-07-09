@@ -29,7 +29,7 @@ export default function RepositoryTables({ consultations, laboratories, imaging 
         <Table
           columns={[
             { key: "fecha", label: "Fecha" },
-            { key: "tipo", label: "Tipo" },
+            { key: "tipoEstudio", label: "Tipo" },
             { key: "resultado", label: "Resultado" },
           ]}
           rows={imaging}

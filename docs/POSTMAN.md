@@ -4,7 +4,7 @@
 
 Importar estos dos archivos:
 
-- `postman/SOLCA-Avances.postman_collection.json`
+- `postman/SOLCA-pruebas-postman.json`
 - `postman/SOLCA-local.postman_environment.json`
 
 Después, seleccionar el entorno `SOLCA Local Docker` en la esquina superior derecha de Postman.

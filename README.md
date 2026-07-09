@@ -6,12 +6,12 @@ Proyecto práctico con frontend React y microservicios Spring Boot independiente
 
 | Puerto | Servicio | Base SQLite |
 | --- | --- | --- |
-| 8000 | auth-service | AuthDB.sqlite |
-| 8001 | paciente-maestro-regional | PacienteDB.sqlite |
-| 8002 | consulta-service | ConsultaDB.sqlite |
-| 8003 | lab-service | LaboratorioDB.sqlite |
-| 8004 | imaginologia-service | ImagenologiaDB.sqlite |
-| 8005 | repositorio-service | RepositorioDB.sqlite |
+| 8000 | auth-service | Autenticacion.sqlite |
+| 8001 | paciente-maestro-regional | Pacientes.sqlite |
+| 8002 | consulta-service | Consultas.sqlite |
+| 8003 | lab-service | Laboratorio.sqlite |
+| 8004 | imaginologia-service | Imagenologia.sqlite |
+| 8005 | repositorio-service | RepositorioClinico.sqlite |
 
 ## Usuarios iniciales
 

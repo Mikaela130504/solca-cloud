@@ -7,6 +7,16 @@
   margin-bottom: 18px;
 }
 
+.repository-alert {
+  margin-bottom: 18px;
+  padding: 12px 14px;
+  border: 1px solid #f2c166;
+  border-radius: 8px;
+  background: #fff8e8;
+  color: #705000;
+  font-weight: 700;
+}
+
 .summary-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -46,6 +56,13 @@
 
 .history-readonly p {
   margin: 5px 0 0;
+}
+
+.local-history-list {
+  display: grid;
+  gap: 8px;
+  margin: 8px 0 0;
+  padding-left: 18px;
 }
 
 .timeline {

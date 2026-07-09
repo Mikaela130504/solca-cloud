@@ -6,7 +6,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:-solca-cloud-secret-solca-cloud-secret-solca-cloud-secret}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
     volumes:
-      - auth-data:/data
+      - ./database/sqlite:/data
     ports:
       - "8000:8080"
 
@@ -17,7 +17,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:-solca-cloud-secret-solca-cloud-secret-solca-cloud-secret}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
     volumes:
-      - paciente-data:/data
+      - ./database/sqlite:/data
     ports:
       - "8001:8080"
 
@@ -28,7 +28,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:-solca-cloud-secret-solca-cloud-secret-solca-cloud-secret}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
     volumes:
-      - consulta-data:/data
+      - ./database/sqlite:/data
     ports:
       - "8002:8080"
 
@@ -39,7 +39,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:-solca-cloud-secret-solca-cloud-secret-solca-cloud-secret}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
     volumes:
-      - laboratorio-data:/data
+      - ./database/sqlite:/data
     ports:
       - "8003:8080"
 
@@ -50,7 +50,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:-solca-cloud-secret-solca-cloud-secret-solca-cloud-secret}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
     volumes:
-      - imagenologia-data:/data
+      - ./database/sqlite:/data
     ports:
       - "8004:8080"
 
@@ -65,7 +65,7 @@ services:
       SERVICE_LABORATORIOS: http://lab-service:8080
       SERVICE_IMAGENOLOGIA: http://imaginologia-service:8080
     volumes:
-      - repositorio-data:/data
+      - ./database/sqlite:/data
     depends_on:
       - paciente-maestro-regional
       - consulta-service
@@ -73,11 +73,3 @@ services:
       - imaginologia-service
     ports:
       - "8005:8080"
-
-volumes:
-  auth-data:
-  paciente-data:
-  consulta-data:
-  laboratorio-data:
-  imagenologia-data:
-  repositorio-data:

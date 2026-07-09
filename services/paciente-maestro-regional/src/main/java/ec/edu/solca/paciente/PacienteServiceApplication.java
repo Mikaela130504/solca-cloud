@@ -21,9 +21,10 @@ public class PacienteServiceApplication {
   @Bean CommandLineRunner schema(JdbcTemplate jdbc) { return args -> new PacienteRepository(jdbc).schema(); }
 }
 
-record PacienteDto(Long id, String idPacienteRegional, String cedula, String nombres, String apellidos, LocalDate fechaNacimiento, Integer edad, String sexo, String estadoCivil, String direccion, String provincia, String ciudad, String telefono, String correo, String contactoEmergencia, String seguro, String tipoSangre, String nacionalidad, String observaciones, String sede) {}
+record PacienteDto(Long id, String idPacienteRegional, String cedula, String nombres, String apellidos, LocalDate fechaNacimiento, Integer edad, String sexo, String estadoCivil, String direccion, String provincia, String ciudad, String telefono, String correo, String contactoEmergencia, String seguro, String tipoSangre, String nacionalidad, String observaciones, String sede, List<HistoriaLocalDto> historiasLocales) {}
 record PacienteRequest(@NotBlank @Pattern(regexp="\\d{10}") String cedula, @NotBlank @Size(max=80) String nombres, @NotBlank @Size(max=80) String apellidos, @NotNull LocalDate fechaNacimiento, @NotBlank String sexo, @NotBlank String estadoCivil, @NotBlank String direccion, @NotBlank String provincia, @NotBlank String ciudad, @NotBlank @Pattern(regexp="\\d{10}") String telefono, @NotBlank @Email String correo, @NotBlank String contactoEmergencia, @NotBlank String seguro, @NotBlank String tipoSangre, @NotBlank String nacionalidad, String observaciones, String sede) {}
 record HistoriaLocalRequest(@NotBlank String sede, @NotBlank String identificadorHistoriaLocal) {}
+record HistoriaLocalDto(String sede, String identificadorHistoriaLocal) {}
 
 @RestController
 @RequestMapping("/pacientes")
@@ -79,7 +80,8 @@ class PacienteRepository {
   List<PacienteDto> listar(String q) { String like = "%" + q + "%"; return jdbc.query("SELECT * FROM pacientes WHERE nombres LIKE ? OR apellidos LIKE ? OR cedula LIKE ? OR id_paciente_regional LIKE ? ORDER BY apellidos,nombres", this::map, like, like, like, like); }
   Optional<PacienteDto> porCedula(String cedula) { return jdbc.query("SELECT * FROM pacientes WHERE cedula=?", this::map, cedula).stream().findFirst(); }
   Optional<PacienteDto> porId(String id) { return jdbc.query("SELECT * FROM pacientes WHERE id_paciente_regional=?", this::map, id).stream().findFirst(); }
-  PacienteDto map(java.sql.ResultSet rs, int row) throws java.sql.SQLException { return new PacienteDto(rs.getLong("id"),rs.getString("id_paciente_regional"),rs.getString("cedula"),rs.getString("nombres"),rs.getString("apellidos"),LocalDate.parse(rs.getString("fecha_nacimiento")),rs.getInt("edad"),rs.getString("sexo"),rs.getString("estado_civil"),rs.getString("direccion"),rs.getString("provincia"),rs.getString("ciudad"),rs.getString("telefono"),rs.getString("correo"),rs.getString("contacto_emergencia"),rs.getString("seguro"),rs.getString("tipo_sangre"),rs.getString("nacionalidad"),rs.getString("observaciones"),rs.getString("sede")); }
+  List<HistoriaLocalDto> historias(String id) { return jdbc.query("SELECT sede, identificador_historia_local FROM historias_clinicas_locales WHERE id_paciente_regional=? ORDER BY sede", (rs, row) -> new HistoriaLocalDto(rs.getString("sede"), rs.getString("identificador_historia_local")), id); }
+  PacienteDto map(java.sql.ResultSet rs, int row) throws java.sql.SQLException { String idRegional = rs.getString("id_paciente_regional"); return new PacienteDto(rs.getLong("id"),idRegional,rs.getString("cedula"),rs.getString("nombres"),rs.getString("apellidos"),LocalDate.parse(rs.getString("fecha_nacimiento")),rs.getInt("edad"),rs.getString("sexo"),rs.getString("estado_civil"),rs.getString("direccion"),rs.getString("provincia"),rs.getString("ciudad"),rs.getString("telefono"),rs.getString("correo"),rs.getString("contacto_emergencia"),rs.getString("seguro"),rs.getString("tipo_sangre"),rs.getString("nacionalidad"),rs.getString("observaciones"),rs.getString("sede"),historias(idRegional)); }
   int edad(LocalDate n) { return java.time.Period.between(n, LocalDate.now()).getYears(); }
 }
 

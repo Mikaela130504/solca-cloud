@@ -34,12 +34,21 @@ export default function Repository() {
 
   const events = useMemo(() => {
     if (!data) return [];
+    const consultations = Array.isArray(data.consultations || data.consultas) ? data.consultations || data.consultas : [];
+    const laboratories = Array.isArray(data.laboratories || data.laboratorios || data.laboratorio) ? data.laboratories || data.laboratorios || data.laboratorio : [];
+    const imaging = Array.isArray(data.imaging || data.imagenologia || data.imagenes) ? data.imaging || data.imagenologia || data.imagenes : [];
     return [
-      ...(data.consultations || data.consultas || []).map((item) => ({ fecha: item.fecha, title: `Consulta ${item.especialidad}`, detail: `${item.motivo} · ${item.medico}` })),
-      ...(data.laboratories || data.laboratorios || []).map((item) => ({ fecha: item.fecha, title: `Laboratorio ${item.tipoExamen}`, detail: item.resultado })),
-      ...(data.imaging || data.imagenologia || []).map((item) => ({ fecha: item.fecha, title: `Imagenología ${item.tipoEstudio || item.tipo}`, detail: item.resultado })),
+      ...consultations.map((item) => ({ fecha: item.fecha, title: `Consulta ${item.especialidad}`, detail: `${item.motivo} · ${item.medico}` })),
+      ...laboratories.map((item) => ({ fecha: item.fecha, title: `Laboratorio ${item.tipoExamen}`, detail: item.resultado })),
+      ...imaging.map((item) => ({ fecha: item.fecha, title: `Imagenología ${item.tipoEstudio || item.tipo}`, detail: item.resultado })),
     ].sort((a, b) => b.fecha.localeCompare(a.fecha));
   }, [data]);
+
+  const patient = data?.patient || data?.paciente;
+  const consultations = Array.isArray(data?.consultations || data?.consultas) ? data.consultations || data.consultas : [];
+  const laboratories = Array.isArray(data?.laboratories || data?.laboratorios || data?.laboratorio) ? data.laboratories || data.laboratorios || data.laboratorio : [];
+  const imaging = Array.isArray(data?.imaging || data?.imagenologia || data?.imagenes) ? data.imaging || data.imagenologia || data.imagenes : [];
+  const unavailable = data?.serviciosNoDisponibles || [];
 
   if (loading) {
     return <Loader />;
@@ -62,12 +71,18 @@ export default function Repository() {
 
       {data && (
         <>
+          {unavailable.length > 0 && (
+            <div className="repository-alert">
+              Servicios no disponibles: {unavailable.join(", ")}
+            </div>
+          )}
+
           <div className="grid grid-2 repository-main">
-            <PatientSummary patient={data.patient || data.paciente} />
-            <ClinicalHistoryView history={data.history || data.historiaClinica} />
+            <PatientSummary patient={patient} />
+            <ClinicalHistoryView history={data.history || data.historiaClinica} historiasLocales={patient?.historiasLocales || []} />
           </div>
 
-          <RepositoryTables consultations={data.consultations || data.consultas || []} laboratories={data.laboratories || data.laboratorios || []} imaging={data.imaging || data.imagenologia || []} />
+          <RepositoryTables consultations={consultations} laboratories={laboratories} imaging={imaging} />
 
           <div className="repository-timeline">
             <ClinicalTimeline events={events} />

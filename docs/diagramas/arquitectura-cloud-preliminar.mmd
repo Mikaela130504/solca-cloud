@@ -7,10 +7,10 @@ flowchart TB
   Frontend --> Imagenologia["Imagenología / PACS básico"]
   Frontend --> Repositorio["Repositorio Clínico Regional"]
 
-  Paciente --> PacienteDB[("PacienteDB.sqlite")]
-  Consulta --> ConsultaDB[("ConsultaDB.sqlite")]
-  Laboratorio --> LaboratorioDB[("LaboratorioDB.sqlite")]
-  Imagenologia --> ImagenologiaDB[("ImagenologiaDB.sqlite")]
+  Paciente --> BasePacientes[("Pacientes.sqlite")]
+  Consulta --> BaseConsultas[("Consultas.sqlite")]
+  Laboratorio --> BaseLaboratorio[("Laboratorio.sqlite")]
+  Imagenologia --> BaseImagenologia[("Imagenologia.sqlite")]
   Repositorio --> APIs["APIs REST internas"]
 
   APIs --> Paciente
@@ -30,5 +30,5 @@ flowchart TB
   Docker --> Laboratorio
   Docker --> Imagenologia
   Docker --> Repositorio
-  DBaaS -. migración futura .-> PacienteDB
+  DBaaS -. migración futura .-> BasePacientes
   Storage -. archivos DICOM/PDF .-> Imagenologia

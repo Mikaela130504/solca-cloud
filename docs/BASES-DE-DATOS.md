@@ -1,6 +1,6 @@
 # Diseño de bases de datos independientes
 
-## PacienteDB.sqlite
+## Pacientes.sqlite
 
 Tabla `pacientes`:
 
@@ -36,9 +36,9 @@ Tabla `historias_clinicas_locales`:
 | sede | TEXT | Obligatorio |
 | identificador_historia_local | TEXT | Obligatorio |
 
-## ConsultaDB.sqlite
+## Consultas.sqlite
 
-Tabla `registros` para consultas clínicas:
+Tabla `consultas`:
 
 | Campo | Tipo |
 | --- | --- |
@@ -55,9 +55,9 @@ Tabla `registros` para consultas clínicas:
 | motivo | TEXT |
 | evolucion | TEXT |
 
-## LaboratorioDB.sqlite
+## Laboratorio.sqlite
 
-Tabla `registros` para laboratorio clínico:
+Tabla `resultados_laboratorio`:
 
 | Campo | Tipo |
 | --- | --- |
@@ -71,9 +71,9 @@ Tabla `registros` para laboratorio clínico:
 | resultado | TEXT |
 | observaciones | TEXT |
 
-## ImagenologiaDB.sqlite
+## Imagenologia.sqlite
 
-Tabla `registros` para imagenología:
+Tabla `estudios_imagenologia`:
 
 | Campo | Tipo |
 | --- | --- |

@@ -16,7 +16,7 @@
 | Microservicio Repositorio Clínico Regional | Cumplido | `services/repositorio-service`, puerto `8005` |
 | API REST básica por microservicio | Cumplido | Controladores Spring Boot en cada servicio |
 | Base de datos independiente por microservicio | Cumplido | Volúmenes Docker independientes y archivos SQLite por servicio |
-| Endpoints mínimos funcionales | Cumplido | Colección `postman/SOLCA-Avances.postman_collection.json` |
+| Endpoints mínimos funcionales | Cumplido | Colección `postman/SOLCA-pruebas-postman.json` |
 | Pruebas en Postman | Preparado | Importar colección Postman y tomar capturas |
 | Repositorio GitHub creado | Pendiente de evidenciar | Tomar captura del repositorio remoto en GitHub |
 | Código organizado por microservicios | Cumplido | Carpeta `services` |
@@ -45,6 +45,22 @@
 | No acceso directo entre bases de datos | Cumplido | Repositorio solo consume APIs REST |
 | Manejo básico de errores si un microservicio no responde | Cumplido | Campo `serviciosNoDisponibles` |
 
+## Lista de cotejo general del proyecto reto
+
+| Criterio | Estado | Evidencia en el proyecto |
+| --- | --- | --- |
+| Avances parciales con progreso técnico y documentación actualizada | Cumplido | `docs/AVANCE-1-DISENO.md`, `docs/AVANCE-2-INTEGRACION.md`, este archivo |
+| Problemática de integración entre sedes y solución cloud coherente | Cumplido | `docs/AVANCE-1-DISENO.md` |
+| Arquitectura cloud distribuida con microservicios, REST, contenedores, bases independientes y repositorio clínico | Cumplido | `docker-compose.yml`, `docs/diagramas/*.mmd` |
+| Paciente Maestro Regional con identificador único e historias locales | Cumplido | `services/paciente-maestro-regional` y endpoint `/pacientes/{id}/historias-locales` |
+| Microservicios Pacientes, Consulta, Laboratorio, Imagenología y Repositorio funcionando de forma independiente | Cumplido | `services/*` y Dockerfiles por servicio |
+| Integración REST sin acceso directo entre bases de datos y vista clínica unificada | Cumplido | `services/repositorio-service` y endpoint `/repositorio/paciente/{idPacienteRegional}` |
+| Seguridad con autenticación, autorización por roles y auditoría | Cumplido | `auth-service`, `@PreAuthorize`, tablas `auditorias`, endpoint `/repositorio-clinico/auditorias`, `docs/AVANCE-3-CLOUD-SEGURIDAD.md` |
+| Contenedores Docker | Cumplido localmente | `Dockerfile` por microservicio y `docker-compose.yml` |
+| Despliegue en proveedor cloud real | Pendiente de acceso externo | Requiere cuenta/credenciales Railway o Fly.io; ver `docs/AVANCE-3-CLOUD-SEGURIDAD.md` |
+| Interfaz gráfica del Repositorio Clínico Regional | Cumplido | `frontend-solca/src/pages/Repository/Repository.jsx` |
+| Documentación técnica, GitHub, evidencias y sustentación | Preparado | `README.md`, `docs/`, `postman/SOLCA-pruebas-postman.json` |
+
 ## Pendiente fuera del código
 
 Estas evidencias no se pueden completar desde el código porque son capturas visuales requeridas por la entrega:
@@ -52,4 +68,5 @@ Estas evidencias no se pueden completar desde el código porque son capturas vis
 - Captura del repositorio GitHub.
 - Capturas de Postman ejecutando los endpoints.
 - Capturas de las bases SQLite abiertas en DB Browser for SQLite o herramienta equivalente.
+- Capturas de contenedores y variables de entorno en Railway/Fly.io cuando se despliegue en cloud real.
 - Exportar o pegar los diagramas Mermaid como imagen en el documento final si el docente lo exige en formato gráfico.

@@ -13,13 +13,18 @@ Tomar las siguientes capturas:
 7. Postman: creación de laboratorio en `POST /laboratorios`.
 8. Postman: creación de imagenología en `POST /imagenologia`.
 9. Postman: integración en `GET /repositorio/paciente/{idPacienteRegional}`.
-10. DB Browser for SQLite mostrando cada base:
-    - PacienteDB.sqlite.
-    - ConsultaDB.sqlite.
-    - LaboratorioDB.sqlite.
-    - ImagenologiaDB.sqlite.
+10. DB Browser for SQLite mostrando cada base en `database/sqlite`:
+    - Autenticacion.sqlite.
+    - Pacientes.sqlite.
+    - Consultas.sqlite.
+    - Laboratorio.sqlite.
+    - Imagenologia.sqlite.
+    - RepositorioClinico.sqlite.
 11. Diagrama preliminar de arquitectura cloud.
 12. Diagrama actualizado de integración.
+13. Postman: asociación de historia clínica local en `POST /pacientes/{idPacienteRegional}/historias-locales`.
+14. Postman: auditoría en `GET /repositorio-clinico/auditorias`.
+15. Cloud: URLs públicas, variables de entorno, contenedores y DBaaS/storage del proveedor.
 
 ## Comandos útiles
 
@@ -30,11 +35,10 @@ docker compose logs --tail=80 repositorio-service
 
 ## Ubicación de bases SQLite en Docker
 
-Las bases están dentro de volúmenes Docker montados en `/data` dentro de cada contenedor. Para copiar una base al proyecto y abrirla con DB Browser:
+Las bases están montadas directamente en el proyecto. Abrir los archivos desde:
 
 ```powershell
-docker cp solca-cloud-paciente-maestro-regional-1:/data/PacienteDB.sqlite ./PacienteDB.sqlite
-docker cp solca-cloud-consulta-service-1:/data/ConsultaDB.sqlite ./ConsultaDB.sqlite
-docker cp solca-cloud-lab-service-1:/data/LaboratorioDB.sqlite ./LaboratorioDB.sqlite
-docker cp solca-cloud-imaginologia-service-1:/data/ImagenologiaDB.sqlite ./ImagenologiaDB.sqlite
+C:\Users\USER\Documents\SEPTIMO\INFRAESTRUCTURA DE SISTEMA EN LA NUBE\PROYECTO-RETO\solca-cloud\database\sqlite
 ```
+
+No es necesario copiar desde el contenedor si se usa `docker-compose.yml`, porque todos los servicios escriben en `./database/sqlite:/data`.
