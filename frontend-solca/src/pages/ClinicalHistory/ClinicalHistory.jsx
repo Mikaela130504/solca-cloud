@@ -43,8 +43,7 @@ const initialValues = {
   cirugias: false,
   cancer: false,
   personalesOtros: false,
-  cirugiaFecha: "",
-  cirugiaProcedimiento: "",
+  cirugiasLista: [{ fecha: "", procedimiento: "" }],
   personalesOtrosDetalle: "",
   cesareas: "",
   partos: "",
@@ -52,7 +51,8 @@ const initialValues = {
   embarazos: "",
   ginecoObservaciones: "",
   medicamentosActuales: "",
-  tieneAlergias: "No",
+  tieneAlergias: false,
+  noTieneAlergias: true,
   alergias: "",
   peso: "",
   talla: "",
@@ -103,9 +103,11 @@ const rules = {
   antecedenteAbuelos: [rule((value, values) => !values.tieneAntecedenteAbuelos || required(value), "Ingrese el antecedente de abuelos.")],
   antecedenteHijos: [rule((value, values) => !values.tieneAntecedenteHijos || required(value), "Ingrese el antecedente de hijos.")],
   antecedenteOtros: [rule((value, values) => !values.tieneAntecedenteOtros || required(value), "Ingrese el antecedente familiar adicional.")],
-  cirugiaFecha: [rule((value, values) => !values.cirugias || (required(value) && isNotFutureDate(value)), "Ingrese fecha de cirugía no futura.")],
-  cirugiaProcedimiento: [rule((value, values) => !values.cirugias || required(value), "Ingrese el procedimiento quirúrgico.")],
-  alergias: [rule((value, values) => values.tieneAlergias !== "Si" || required(value), "Describa las alergias.")],
+  cirugiasLista: [rule((value, values) => {
+    if (!values.cirugias) return true;
+    return Array.isArray(value) && value.length > 0 && value.every((item) => required(item.fecha) && isNotFutureDate(item.fecha) && required(item.procedimiento));
+  }, "Ingrese fecha no futura y procedimiento en cada cirugía.")],
+  alergias: [rule((value, values) => !values.tieneAlergias || required(value), "Describa las alergias.")],
 };
 
 function CheckField({ name, label, checked, onChange }) {
@@ -129,15 +131,23 @@ function buildFamilyHistory(values) {
   return selected.length ? selected.join("; ") : "Sin antecedentes familiares marcados";
 }
 
+function buildSurgeries(values) {
+  if (!values.cirugias) return "";
+  return values.cirugiasLista
+    .filter((item) => item.fecha || item.procedimiento)
+    .map((item, index) => `Cirugía ${index + 1}: ${item.fecha || "Sin fecha"} - ${item.procedimiento || "Sin procedimiento"}`)
+    .join("; ");
+}
+
 function buildObservations(values) {
   return [
     `Antecedentes familiares: ${buildFamilyHistory(values)}.`,
     `Antecedentes personales: ${["diabetes", "hipertension", "asma", "cirugias", "cancer", "personalesOtros"].filter((key) => values[key]).join(", ") || "Sin antecedentes marcados"}.`,
-    values.cirugias ? `Cirugía: ${values.cirugiaFecha} - ${values.cirugiaProcedimiento}.` : "",
+    values.cirugias ? buildSurgeries(values) : "",
     values.personalesOtros ? `Otros personales: ${values.personalesOtrosDetalle}.` : "",
     `Gineco-obstétricos: Cesáreas ${values.cesareas || 0}; Partos ${values.partos || 0}; Abortos ${values.abortos || 0}; Embarazos ${values.embarazos || 0}; Observaciones: ${values.ginecoObservaciones || "N/A"}.`,
     `Medicamentos actuales: ${values.medicamentosActuales || "N/A"}.`,
-    `Alergias: ${values.tieneAlergias === "Si" ? values.alergias : "No refiere"}.`,
+    `Alergias: ${values.tieneAlergias ? values.alergias : "No refiere"}.`,
     `Examen físico: General: ${values.examenGeneral || "N/A"}; Cabeza/cuello: ${values.cabezaCuello || "N/A"}; Tórax: ${values.torax || "N/A"}; Abdomen: ${values.abdomen || "N/A"}; Extremidades: ${values.extremidades || "N/A"}; Neurológico: ${values.neurologico || "N/A"}.`,
     values.observaciones ? `Observaciones: ${values.observaciones}` : "",
   ].filter(Boolean).join("\n");
@@ -194,6 +204,66 @@ export default function ClinicalHistory() {
       ...current,
       diagnosticoSecundario: diagnosis ? diagnosis.enfermedad : "",
       cie10Secundario: diagnosis ? diagnosis.codigo : "",
+    }));
+  };
+
+  const handleCheckChange = (event) => {
+    const { name, checked } = event.target;
+
+    if (name === "cirugias") {
+      form.setValues((current) => ({
+        ...current,
+        cirugias: checked,
+        cirugiasLista: checked && current.cirugiasLista.length ? current.cirugiasLista : [{ fecha: "", procedimiento: "" }],
+      }));
+      return;
+    }
+
+    if (name === "tieneAlergias") {
+      form.setValues((current) => ({
+        ...current,
+        tieneAlergias: checked,
+        noTieneAlergias: !checked,
+        alergias: checked ? current.alergias : "",
+      }));
+      return;
+    }
+
+    if (name === "noTieneAlergias") {
+      form.setValues((current) => ({
+        ...current,
+        tieneAlergias: false,
+        noTieneAlergias: true,
+        alergias: "",
+      }));
+      return;
+    }
+
+    form.handleChange(event);
+  };
+
+  const addSurgery = () => {
+    form.setValues((current) => ({
+      ...current,
+      cirugiasLista: [...current.cirugiasLista, { fecha: "", procedimiento: "" }],
+    }));
+  };
+
+  const removeSurgery = (index) => {
+    form.setValues((current) => ({
+      ...current,
+      cirugiasLista: current.cirugiasLista.filter((_, itemIndex) => itemIndex !== index).length
+        ? current.cirugiasLista.filter((_, itemIndex) => itemIndex !== index)
+        : [{ fecha: "", procedimiento: "" }],
+    }));
+  };
+
+  const updateSurgery = (index, field, value) => {
+    form.setValues((current) => ({
+      ...current,
+      cirugiasLista: current.cirugiasLista.map((item, itemIndex) => (
+        itemIndex === index ? { ...item, [field]: value } : item
+      )),
     }));
   };
 
@@ -287,14 +357,32 @@ export default function ClinicalHistory() {
               <CheckField name="diabetes" label="Diabetes" checked={form.values.diabetes} onChange={form.handleChange} />
               <CheckField name="hipertension" label="Hipertensión" checked={form.values.hipertension} onChange={form.handleChange} />
               <CheckField name="asma" label="Asma" checked={form.values.asma} onChange={form.handleChange} />
-              <CheckField name="cirugias" label="Cirugías" checked={form.values.cirugias} onChange={form.handleChange} />
+              <CheckField name="cirugias" label="Cirugías" checked={form.values.cirugias} onChange={handleCheckChange} />
               <CheckField name="cancer" label="Cáncer" checked={form.values.cancer} onChange={form.handleChange} />
               <CheckField name="personalesOtros" label="Otros" checked={form.values.personalesOtros} onChange={form.handleChange} />
             </div>
             {form.values.cirugias && (
-              <div className="grid grid-2">
-                <Input label="Fecha de cirugía" type="date" name="cirugiaFecha" value={form.values.cirugiaFecha} onChange={form.handleChange} error={form.errors.cirugiaFecha} />
-                <Input label="Procedimiento" name="cirugiaProcedimiento" value={form.values.cirugiaProcedimiento} onChange={form.handleChange} error={form.errors.cirugiaProcedimiento} />
+              <div className="dynamic-list">
+                {form.values.cirugiasLista.map((cirugia, index) => (
+                  <div className="dynamic-row" key={`cirugia-${index}`}>
+                    <Input
+                      label={`Fecha de cirugía ${index + 1}`}
+                      type="date"
+                      name={`cirugiaFecha-${index}`}
+                      value={cirugia.fecha}
+                      onChange={(event) => updateSurgery(index, "fecha", event.target.value)}
+                    />
+                    <Input
+                      label={`Procedimiento ${index + 1}`}
+                      name={`cirugiaProcedimiento-${index}`}
+                      value={cirugia.procedimiento}
+                      onChange={(event) => updateSurgery(index, "procedimiento", event.target.value)}
+                    />
+                    <Button type="button" variant="ghost" onClick={() => removeSurgery(index)} disabled={form.values.cirugiasLista.length === 1}>Eliminar</Button>
+                  </div>
+                ))}
+                {form.errors.cirugiasLista ? <span className="field-error">{form.errors.cirugiasLista}</span> : null}
+                <Button type="button" variant="secondary" onClick={addSurgery}>+ Agregar cirugía</Button>
               </div>
             )}
             {form.values.personalesOtros && <Input label="Detalle otros antecedentes" name="personalesOtrosDetalle" value={form.values.personalesOtrosDetalle} onChange={form.handleChange} />}
@@ -315,8 +403,14 @@ export default function ClinicalHistory() {
             <div className="form-section-title">Medicamentos y alergias</div>
             <div className="grid grid-2">
               <Input label="Medicamentos actuales" type="textarea" name="medicamentosActuales" value={form.values.medicamentosActuales} onChange={form.handleChange} />
-              <Select label="¿Tiene alergias?" name="tieneAlergias" value={form.values.tieneAlergias} onChange={form.handleChange} options={["Si", "No"]} />
-              {form.values.tieneAlergias === "Si" && <Input label="Descripción de alergias" type="textarea" name="alergias" value={form.values.alergias} onChange={form.handleChange} error={form.errors.alergias} />}
+              <div className="field">
+                <span className="field-label">¿Tiene alergias?</span>
+                <div className="checkbox-grid compact-checks">
+                  <CheckField name="tieneAlergias" label="Sí" checked={form.values.tieneAlergias} onChange={handleCheckChange} />
+                  <CheckField name="noTieneAlergias" label="No" checked={form.values.noTieneAlergias} onChange={handleCheckChange} />
+                </div>
+              </div>
+              {form.values.tieneAlergias && <Input label="Descripción de alergias" type="textarea" name="alergias" value={form.values.alergias} onChange={form.handleChange} error={form.errors.alergias} />}
             </div>
           </div>
 

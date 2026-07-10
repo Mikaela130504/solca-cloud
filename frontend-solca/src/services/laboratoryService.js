@@ -23,3 +23,8 @@ export async function listLaboratoryResults(idPacienteRegional) {
   const { data } = await api.get(path);
   return data;
 }
+
+export async function listLaboratoryOrders() {
+  const { data } = await api.get("/laboratorios");
+  return data;
+}

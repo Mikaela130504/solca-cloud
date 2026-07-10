@@ -378,6 +378,22 @@ textarea {
   border-radius: var(--radius);
 }
 
+.compact-checks {
+  grid-template-columns: repeat(2, minmax(0, 140px));
+}
+
+.dynamic-list {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.dynamic-row {
+  display: grid;
+  grid-template-columns: minmax(160px, 0.7fr) minmax(240px, 1.3fr) auto;
+  align-items: end;
+  gap: var(--space-3);
+}
+
 .readonly-box {
   min-height: 42px;
   padding: 0.72rem var(--space-3);
@@ -642,7 +658,8 @@ textarea {
 
   .grid-2,
   .grid-3,
-  .grid-4 {
+  .grid-4,
+  .dynamic-row {
     grid-template-columns: 1fr;
   }
 }

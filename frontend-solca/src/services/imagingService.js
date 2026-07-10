@@ -32,3 +32,8 @@ export async function listImagingStudies(idPacienteRegional) {
   const { data } = await api.get(path);
   return data;
 }
+
+export async function listAllImagingStudies() {
+  const { data } = await api.get("/imagenologia");
+  return data;
+}

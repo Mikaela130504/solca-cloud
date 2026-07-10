@@ -44,3 +44,8 @@ export async function listConsultationsByPatient(idPacienteRegional) {
   const { data } = await api.get(`/consultas/paciente/${idPacienteRegional}`);
   return data;
 }
+
+export async function listConsultations() {
+  const { data } = await api.get("/consultas");
+  return data;
+}
