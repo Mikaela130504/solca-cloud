@@ -6,6 +6,7 @@ export default function PatientSummary({ patient }) {
   }
 
   const items = [
+    ["Nº paciente repositorio", patient.idPacienteRegional],
     ["Cédula", patient.cedula],
     ["Paciente", `${patient.nombres} ${patient.apellidos}`],
     ["Edad", `${patient.edad ?? ""} años`],

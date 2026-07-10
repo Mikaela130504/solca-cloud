@@ -59,7 +59,7 @@ export default function Laboratory() {
       ...current,
       idPacienteRegional: patient?.idPacienteRegional || current.idPacienteRegional,
       cedula: patient?.cedula || current.cedula,
-      paciente: patient ? `${patient.nombres} ${patient.apellidos}` : current.paciente,
+      paciente: patient ? `${patient.idPacienteRegional} - ${patient.nombres} ${patient.apellidos}` : current.paciente,
       diagnosticoPresuntivo: stateDiagnosis?.enfermedad || current.diagnosticoPresuntivo,
       cie10: stateDiagnosis?.codigo || current.cie10,
       medico: location.state?.medico || user?.name || user?.username || current.medico,
@@ -74,7 +74,7 @@ export default function Laboratory() {
       ...current,
       idPacienteRegional: patient?.idPacienteRegional || "",
       cedula: patient?.cedula || "",
-      paciente: patient ? `${patient.nombres} ${patient.apellidos}` : "",
+      paciente: patient ? `${patient.idPacienteRegional} - ${patient.nombres} ${patient.apellidos}` : "",
     }));
   };
 

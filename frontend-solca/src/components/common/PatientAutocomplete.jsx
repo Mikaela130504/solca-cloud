@@ -29,7 +29,7 @@ export default function PatientAutocomplete({ value = "", selectedPatient, onSel
 
   const display = useMemo(() => {
     if (!selectedPatient) return query;
-    return `${selectedPatient.cedula} - ${selectedPatient.nombres} ${selectedPatient.apellidos}`;
+    return `${selectedPatient.idPacienteRegional} · ${selectedPatient.cedula} - ${selectedPatient.nombres} ${selectedPatient.apellidos}`;
   }, [query, selectedPatient]);
 
   const handleChange = (event) => {
@@ -40,7 +40,7 @@ export default function PatientAutocomplete({ value = "", selectedPatient, onSel
 
   const pick = (patient) => {
     setOpen(false);
-    setQuery(`${patient.cedula} - ${patient.nombres} ${patient.apellidos}`);
+    setQuery(`${patient.idPacienteRegional} · ${patient.cedula} - ${patient.nombres} ${patient.apellidos}`);
     onSelect(patient);
   };
 
@@ -62,7 +62,10 @@ export default function PatientAutocomplete({ value = "", selectedPatient, onSel
             <button type="button" key={patient.idPacienteRegional} onMouseDown={() => pick(patient)}>
               <strong>{patient.cedula}</strong>
               <span>{patient.nombres} {patient.apellidos}</span>
-              <small>{patient.idPacienteRegional}</small>
+              <small>Nº paciente repositorio: {patient.idPacienteRegional}</small>
+              {patient.historiasLocales?.length > 0 && (
+                <small>Historia clínica: {patient.historiasLocales.map((item) => item.identificadorHistoriaLocal).join(", ")}</small>
+              )}
             </button>
           ))}
         </div>

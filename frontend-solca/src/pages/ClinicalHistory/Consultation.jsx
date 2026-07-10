@@ -90,7 +90,7 @@ export default function Consultation() {
       ...current,
       idPacienteRegional: patient?.idPacienteRegional || current.idPacienteRegional,
       cedula: patient?.cedula || current.cedula,
-      paciente: patient ? `${patient.nombres} ${patient.apellidos}` : current.paciente,
+      paciente: patient ? `${patient.idPacienteRegional} - ${patient.nombres} ${patient.apellidos}` : current.paciente,
       diagnostico: stateDiagnosis?.enfermedad || current.diagnostico,
       cie10: stateDiagnosis?.codigo || current.cie10,
       medico: user?.name || user?.username || current.medico,
@@ -105,7 +105,7 @@ export default function Consultation() {
       ...current,
       idPacienteRegional: patient?.idPacienteRegional || "",
       cedula: patient?.cedula || "",
-      paciente: patient ? `${patient.nombres} ${patient.apellidos}` : "",
+      paciente: patient ? `${patient.idPacienteRegional} - ${patient.nombres} ${patient.apellidos}` : "",
     }));
   };
 

@@ -5,6 +5,14 @@ export default function ClinicalHistoryView({ history, historiasLocales = [] }) 
   return (
     <Card title="Historia clínica" subtitle="Resumen longitudinal no editable">
       <div className="history-readonly">
+        <article>
+          <span>Número de historia clínica</span>
+          <p>
+            {historiasLocales.length > 0
+              ? historiasLocales.map((item) => `${item.sede}: ${item.identificadorHistoriaLocal}`).join(" · ")
+              : "Sin historias locales registradas"}
+          </p>
+        </article>
         {historiasLocales.length > 0 && (
           <article>
             <span>Historias locales por sede</span>

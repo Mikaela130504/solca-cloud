@@ -157,7 +157,7 @@ export default function ClinicalHistory() {
       ...current,
       idPacienteRegional: patient?.idPacienteRegional || "",
       cedula: patient?.cedula || "",
-      paciente: patient ? `${patient.nombres} ${patient.apellidos}` : "",
+      paciente: patient ? `${patient.idPacienteRegional} - ${patient.nombres} ${patient.apellidos}` : "",
     }));
   };
 

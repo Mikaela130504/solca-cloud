@@ -57,7 +57,7 @@ export default function Imaging() {
       ...current,
       idPacienteRegional: patient?.idPacienteRegional || current.idPacienteRegional,
       cedula: patient?.cedula || current.cedula,
-      paciente: patient ? `${patient.nombres} ${patient.apellidos}` : current.paciente,
+      paciente: patient ? `${patient.idPacienteRegional} - ${patient.nombres} ${patient.apellidos}` : current.paciente,
       medico: location.state?.medico || user?.name || user?.username || current.medico,
       sede: location.state?.sede || current.sede,
     }));
@@ -70,7 +70,7 @@ export default function Imaging() {
       ...current,
       idPacienteRegional: patient?.idPacienteRegional || "",
       cedula: patient?.cedula || "",
-      paciente: patient ? `${patient.nombres} ${patient.apellidos}` : "",
+      paciente: patient ? `${patient.idPacienteRegional} - ${patient.nombres} ${patient.apellidos}` : "",
     }));
   };
 
