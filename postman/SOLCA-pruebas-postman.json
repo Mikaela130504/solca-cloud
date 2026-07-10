@@ -11,7 +11,7 @@
     { "key": "baseImagenologia", "value": "http://localhost:8004" },
     { "key": "baseRepositorio", "value": "http://localhost:8005" },
     { "key": "token", "value": "" },
-    { "key": "idPacienteRegional", "value": "PAC-0000001" }
+    { "key": "idPacienteRegional", "value": "PAC000000001" }
   ],
   "item": [
     {
@@ -47,7 +47,7 @@
         "url": "{{basePacientes}}/pacientes",
         "body": {
           "mode": "raw",
-          "raw": "{\"cedula\":\"1710034065\",\"nombres\":\"Paciente\",\"apellidos\":\"Entrega\",\"fechaNacimiento\":\"1980-05-10\",\"sexo\":\"Femenino\",\"estadoCivil\":\"Soltero/a\",\"direccion\":\"Dirección registrada\",\"provincia\":\"Pichincha\",\"ciudad\":\"Quito\",\"telefono\":\"0999999999\",\"correo\":\"paciente@solca.local\",\"contactoEmergencia\":\"Contacto registrado\",\"seguro\":\"IESS\",\"tipoSangre\":\"O+\",\"nacionalidad\":\"Ecuatoriana\",\"observaciones\":\"Registro para evidencia académica\",\"sede\":\"SOLCA Quito\"}"
+          "raw": "{\"cedula\":\"1710034065\",\"nombres\":\"Paciente\",\"apellidos\":\"Entrega\",\"fechaNacimiento\":\"1980-05-10\",\"sexo\":\"Femenino\",\"estadoCivil\":\"Soltero/a\",\"direccion\":\"Dirección registrada\",\"provincia\":\"Pichincha\",\"ciudad\":\"Quito\",\"telefono\":\"0999999999\",\"correo\":\"paciente@solca.local\",\"contactoEmergencia\":\"0988888888\",\"seguro\":\"IESS\",\"tipoSangre\":\"O+\",\"nacionalidad\":\"Ecuatoriana\",\"observaciones\":\"Registro para evidencia académica\",\"sede\":\"SOLCA Quito\"}"
         }
       },
       "event": [{
@@ -80,7 +80,7 @@
         "url": "{{basePacientes}}/pacientes/{{idPacienteRegional}}/historias-locales",
         "body": {
           "mode": "raw",
-          "raw": "{\"sede\":\"SOLCA Quito\",\"identificadorHistoriaLocal\":\"HC-Q-2026-001\"}"
+          "raw": "{\"sede\":\"SOLCA Guayaquil\",\"identificadorHistoriaLocal\":\"0000001\"}"
         }
       }
     },
