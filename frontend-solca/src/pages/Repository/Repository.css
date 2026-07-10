@@ -1,9 +1,12 @@
 .repository-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
   margin-bottom: 18px;
 }
 
-.repository-main,
-.repository-timeline {
+.repository-main {
   margin-bottom: 18px;
 }
 
@@ -65,31 +68,9 @@
   padding-left: 18px;
 }
 
-.timeline {
-  display: grid;
-  gap: 16px;
-}
-
-.timeline article {
-  display: grid;
-  grid-template-columns: 120px minmax(0, 1fr);
-  gap: 18px;
-  position: relative;
-}
-
-.timeline time {
-  color: var(--color-primary);
-  font-weight: 800;
-}
-
-.timeline p {
-  margin: 4px 0 0;
-  color: var(--color-muted);
-}
-
 @media (max-width: 620px) {
-  .summary-list,
-  .timeline article {
+  .repository-toolbar,
+  .summary-list {
     grid-template-columns: 1fr;
   }
 }

@@ -72,8 +72,8 @@ class RegistroService {
   List<RegistroDto> listar() { return repo.listar(); }
   RegistroDto obtener(Long id) { return repo.obtener(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Registro no encontrado.")); }
   List<RegistroDto> porPaciente(String id) { return repo.porPaciente(id); }
-  RegistroDto crear(RegistroRequest r, HttpServletRequest http) { RegistroDto dto = repo.crear(r); Auditoria.registrar(repo.jdbc(), "CREAR_IMAGENOLOGIA", dto.idPacienteRegional(), http); return dto; }
-  RegistroDto editar(Long id, RegistroRequest r, HttpServletRequest http) { RegistroDto dto = repo.editar(id, r); Auditoria.registrar(repo.jdbc(), "EDITAR_IMAGENOLOGIA", dto.idPacienteRegional(), http); return dto; }
+  RegistroDto crear(RegistroRequest r, HttpServletRequest http) { if (r.fecha().isAfter(LocalDate.now())) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La fecha no puede ser futura."); RegistroDto dto = repo.crear(r); Auditoria.registrar(repo.jdbc(), "CREAR_IMAGENOLOGIA", dto.idPacienteRegional(), http); return dto; }
+  RegistroDto editar(Long id, RegistroRequest r, HttpServletRequest http) { if (r.fecha().isAfter(LocalDate.now())) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La fecha no puede ser futura."); RegistroDto dto = repo.editar(id, r); Auditoria.registrar(repo.jdbc(), "EDITAR_IMAGENOLOGIA", dto.idPacienteRegional(), http); return dto; }
   void eliminar(Long id, HttpServletRequest http) { String paciente = obtener(id).idPacienteRegional(); repo.eliminar(id); Auditoria.registrar(repo.jdbc(), "ELIMINAR_IMAGENOLOGIA", paciente, http); }
   ResponseEntity<byte[]> descargar(Long id) throws Exception {
     RegistroDto dto = obtener(id);

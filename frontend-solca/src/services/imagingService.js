@@ -4,7 +4,21 @@ const api = createApiClient(API_CONFIG.imagingUrl);
 
 export async function createImagingStudy(study) {
   const formData = new FormData();
-  Object.entries(study).forEach(([key, value]) => {
+  const payload = {
+    cedula: study.cedula,
+    idPacienteRegional: study.idPacienteRegional,
+    fecha: study.fecha,
+    sede: study.sede,
+    medico: study.medico,
+    tipoEstudio: study.tipoEstudio,
+    formato: study.formato,
+    url: study.url,
+    regionAnatomica: study.regionAnatomica,
+    resultado: study.resultado,
+    observaciones: study.observaciones,
+    archivo: study.archivo,
+  };
+  Object.entries(payload).forEach(([key, value]) => {
     if (value !== undefined && value !== null) formData.append(key, value);
   });
   const { data } = await api.post("/imagenologia", formData, {

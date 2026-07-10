@@ -26,7 +26,7 @@ public class AuthServiceApplication {
   @Bean CommandLineRunner seed(AuthRepository repo, PasswordEncoder encoder) {
     return args -> {
       repo.save("admin", encoder.encode("admin123"), "ADMIN", "Administrador SOLCA");
-      repo.save("medico", encoder.encode("medico123"), "MEDICO", "Médico SOLCA");
+      repo.save("medico", encoder.encode("medico123"), "MEDICO", "Dr. Carlos Salazar");
       repo.save("laboratorio", encoder.encode("lab123"), "LABORATORIO", "Laboratorio SOLCA");
     };
   }

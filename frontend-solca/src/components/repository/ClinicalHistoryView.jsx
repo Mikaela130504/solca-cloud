@@ -29,10 +29,6 @@ export default function ClinicalHistoryView({ history, historiasLocales = [] }) 
           <span>Tratamiento</span>
           <p>{current.tratamiento || "Sin registro"}</p>
         </article>
-        <article>
-          <span>Pronóstico</span>
-          <p>{current.pronostico || "Sin registro"}</p>
-        </article>
       </div>
     </Card>
   );

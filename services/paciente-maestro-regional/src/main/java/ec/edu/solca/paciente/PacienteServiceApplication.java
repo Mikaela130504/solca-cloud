@@ -22,7 +22,7 @@ public class PacienteServiceApplication {
 }
 
 record PacienteDto(Long id, String idPacienteRegional, String cedula, String nombres, String apellidos, LocalDate fechaNacimiento, Integer edad, String sexo, String estadoCivil, String direccion, String provincia, String ciudad, String telefono, String correo, String contactoEmergencia, String seguro, String tipoSangre, String nacionalidad, String observaciones, String sede, List<HistoriaLocalDto> historiasLocales) {}
-record PacienteRequest(@NotBlank @Pattern(regexp="\\d{10}") String cedula, @NotBlank @Size(max=80) String nombres, @NotBlank @Size(max=80) String apellidos, @NotNull LocalDate fechaNacimiento, @NotBlank String sexo, @NotBlank String estadoCivil, @NotBlank String direccion, @NotBlank String provincia, @NotBlank String ciudad, @NotBlank @Pattern(regexp="\\d{10}") String telefono, @NotBlank @Email String correo, @NotBlank String contactoEmergencia, @NotBlank String seguro, @NotBlank String tipoSangre, @NotBlank String nacionalidad, String observaciones, String sede) {}
+record PacienteRequest(@NotBlank @Pattern(regexp="\\d{10}") String cedula, @NotBlank @Pattern(regexp="[A-Za-zÁÉÍÓÚáéíóúÑñÜü\\s]+") @Size(max=80) String nombres, @NotBlank @Pattern(regexp="[A-Za-zÁÉÍÓÚáéíóúÑñÜü\\s]+") @Size(max=80) String apellidos, @NotNull LocalDate fechaNacimiento, @NotBlank String sexo, @NotBlank String estadoCivil, @NotBlank String direccion, @NotBlank String provincia, @NotBlank String ciudad, @NotBlank @Pattern(regexp="\\d{10}") String telefono, @NotBlank @Email String correo, @NotBlank @Pattern(regexp="\\d{10}") String contactoEmergencia, @NotBlank String seguro, @NotBlank String tipoSangre, @NotBlank @Pattern(regexp="[A-Za-zÁÉÍÓÚáéíóúÑñÜü\\s]+") String nacionalidad, String observaciones, String sede) {}
 record HistoriaLocalRequest(@NotBlank String sede, @NotBlank String identificadorHistoriaLocal) {}
 record HistoriaLocalDto(String sede, String identificadorHistoriaLocal) {}
 
@@ -47,13 +47,18 @@ class PacienteService {
   List<PacienteDto> listar(String q) { return repo.listar(q); }
   PacienteDto crear(PacienteRequest r, HttpServletRequest http) {
     if (!Cedula.valida(r.cedula())) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cédula ecuatoriana inválida.");
+    if (r.fechaNacimiento().isAfter(LocalDate.now())) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La fecha de nacimiento no puede ser futura.");
     if (repo.existeCedula(r.cedula())) throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe un paciente con esa cédula.");
     String regional = repo.siguienteIdRegional();
     PacienteDto dto = repo.crear(regional, r);
     Auditoria.registrar(repo.jdbc(), "CREAR_PACIENTE", regional, http);
     return dto;
   }
-  PacienteDto editar(String id, PacienteRequest r, HttpServletRequest http) { PacienteDto dto = repo.editar(id, r); Auditoria.registrar(repo.jdbc(), "EDITAR_PACIENTE", id, http); return dto; }
+  PacienteDto editar(String id, PacienteRequest r, HttpServletRequest http) {
+    if (!Cedula.valida(r.cedula())) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cédula ecuatoriana inválida.");
+    if (r.fechaNacimiento().isAfter(LocalDate.now())) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La fecha de nacimiento no puede ser futura.");
+    PacienteDto dto = repo.editar(id, r); Auditoria.registrar(repo.jdbc(), "EDITAR_PACIENTE", id, http); return dto;
+  }
   void eliminar(String id, HttpServletRequest http) { repo.eliminar(id); Auditoria.registrar(repo.jdbc(), "ELIMINAR_PACIENTE", id, http); }
   PacienteDto porCedula(String cedula) { return repo.porCedula(cedula).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Paciente no encontrado.")); }
   PacienteDto porId(String id) { return repo.porId(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Paciente no encontrado.")); }

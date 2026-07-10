@@ -32,13 +32,6 @@ export const ESPECIALIDADES_MEDICAS = [
   "Cuidados paliativos",
 ];
 
-export const MEDICOS_RESPONSABLES = [
-  "Dra. Valeria Molina",
-  "Dr. Carlos Salazar",
-  "Dra. Andrea Romero",
-  "Dr. Miguel Zambrano",
-];
-
 export const TIPOS_CONSULTA = ["Primera vez", "Control", "Emergencia", "Interconsulta", "Seguimiento"];
 
 export const TIPOS_LABORATORIO = [
@@ -55,6 +48,19 @@ export const PRIORIDADES = ["Normal", "Preferente", "Urgente"];
 export const TIPOS_ESTUDIO = ["Radiografía", "Ecografía", "Tomografía", "Resonancia", "Mamografía", "PET-CT"];
 
 export const FORMATOS_IMAGEN = ["PDF", "JPG", "PNG", "DICOM"];
+
+export const REGIONES_ANATOMICAS = [
+  "Cabeza",
+  "Cuello",
+  "Tórax",
+  "Abdomen",
+  "Pelvis",
+  "Columna",
+  "Miembro superior",
+  "Miembro inferior",
+  "Mama",
+  "Cuerpo completo",
+];
 
 export const SEGUROS_MEDICOS = ["IESS", "MSP", "ISSFA", "ISSPOL", "Privado", "Sin cobertura"];
 

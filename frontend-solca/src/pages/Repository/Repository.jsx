@@ -1,16 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Button from "../../components/common/Button.jsx";
 import Loader from "../../components/common/Loader.jsx";
-import SearchBar from "../../components/common/SearchBar.jsx";
+import PatientAutocomplete from "../../components/common/PatientAutocomplete.jsx";
 import ClinicalHistoryView from "../../components/repository/ClinicalHistoryView.jsx";
-import ClinicalTimeline from "../../components/repository/ClinicalTimeline.jsx";
+import ExpandableRecords from "../../components/repository/ExpandableRecords.jsx";
 import PatientSummary from "../../components/repository/PatientSummary.jsx";
-import RepositoryTables from "../../components/repository/RepositoryTables.jsx";
 import { getClinicalRepository } from "../../services/repositoryService.js";
 import "./Repository.css";
 
 export default function Repository() {
-  const [query, setQuery] = useState("");
+  const [selectedPatient, setSelectedPatient] = useState(null);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -22,27 +21,15 @@ export default function Repository() {
 
   const handleSearch = async (event) => {
     event.preventDefault();
-    if (!query.trim()) return;
+    if (!selectedPatient?.idPacienteRegional) return;
     setLoading(true);
     try {
-      const payload = await getClinicalRepository(query.trim());
+      const payload = await getClinicalRepository(selectedPatient.idPacienteRegional);
       setData(payload);
     } finally {
       setLoading(false);
     }
   };
-
-  const events = useMemo(() => {
-    if (!data) return [];
-    const consultations = Array.isArray(data.consultations || data.consultas) ? data.consultations || data.consultas : [];
-    const laboratories = Array.isArray(data.laboratories || data.laboratorios || data.laboratorio) ? data.laboratories || data.laboratorios || data.laboratorio : [];
-    const imaging = Array.isArray(data.imaging || data.imagenologia || data.imagenes) ? data.imaging || data.imagenologia || data.imagenes : [];
-    return [
-      ...consultations.map((item) => ({ fecha: item.fecha, title: `Consulta ${item.especialidad}`, detail: `${item.motivo} · ${item.medico}` })),
-      ...laboratories.map((item) => ({ fecha: item.fecha, title: `Laboratorio ${item.tipoExamen}`, detail: item.resultado })),
-      ...imaging.map((item) => ({ fecha: item.fecha, title: `Imagenología ${item.tipoEstudio || item.tipo}`, detail: item.resultado })),
-    ].sort((a, b) => b.fecha.localeCompare(a.fecha));
-  }, [data]);
 
   const patient = data?.patient || data?.paciente;
   const consultations = Array.isArray(data?.consultations || data?.consultas) ? data.consultations || data.consultas : [];
@@ -65,7 +52,7 @@ export default function Repository() {
       </div>
 
       <form className="repository-toolbar" onSubmit={handleSearch}>
-        <SearchBar value={query} onChange={(event) => setQuery(event.target.value)} />
+        <PatientAutocomplete selectedPatient={selectedPatient} onSelect={setSelectedPatient} label="Buscar paciente" />
         <Button type="submit" loading={loading}>Buscar</Button>
       </form>
 
@@ -82,11 +69,7 @@ export default function Repository() {
             <ClinicalHistoryView history={data.history || data.historiaClinica} historiasLocales={patient?.historiasLocales || []} />
           </div>
 
-          <RepositoryTables consultations={consultations} laboratories={laboratories} imaging={imaging} />
-
-          <div className="repository-timeline">
-            <ClinicalTimeline events={events} />
-          </div>
+          <ExpandableRecords consultations={consultations} laboratories={laboratories} imaging={imaging} />
         </>
       )}
     </>

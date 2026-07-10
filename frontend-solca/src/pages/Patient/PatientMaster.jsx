@@ -24,7 +24,7 @@ const initialValues = {
   contactoEmergencia: "",
   seguro: "",
   tipoSangre: "",
-  nacionalidad: "Ecuatoriana",
+  nacionalidad: "",
   observaciones: "",
 };
 
@@ -44,7 +44,7 @@ const rules = {
   ciudad: [rule(required, "La ciudad es obligatoria."), rule(onlyLetters, "Use solo letras en ciudad.")],
   telefono: [rule(required, "El teléfono es obligatorio."), rule(isPhone, "El teléfono debe tener 10 dígitos numéricos.")],
   correo: [rule(required, "El correo es obligatorio."), rule(isEmail, "Ingrese un correo válido.")],
-  contactoEmergencia: [rule(required, "El contacto de emergencia es obligatorio.")],
+  contactoEmergencia: [rule(required, "El teléfono de emergencia es obligatorio."), rule(isPhone, "El teléfono de emergencia debe tener 10 dígitos numéricos.")],
   seguro: [rule(required, "El seguro es obligatorio.")],
   tipoSangre: [rule(required, "Seleccione el tipo de sangre.")],
   nacionalidad: [rule(required, "La nacionalidad es obligatoria."), rule(onlyLetters, "Use solo letras en nacionalidad.")],
@@ -55,6 +55,12 @@ export default function PatientMaster() {
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState("");
   const age = calculateAge(form.values.fechaNacimiento);
+
+  const handleDigits = (event) => {
+    const { name, value, maxLength } = event.target;
+    const digits = value.replace(/\D/g, "").slice(0, Number(maxLength) || 10);
+    form.setValues((current) => ({ ...current, [name]: digits }));
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -79,7 +85,7 @@ export default function PatientMaster() {
         <form onSubmit={handleSubmit} noValidate>
           <div className="form-section">
             <div className="grid grid-3">
-              <Input label="Cédula ecuatoriana" name="cedula" value={form.values.cedula} onChange={form.handleChange} error={form.errors.cedula} maxLength="10" />
+              <Input label="Cédula ecuatoriana" name="cedula" value={form.values.cedula} onChange={handleDigits} error={form.errors.cedula} maxLength="10" inputMode="numeric" />
               <Input label="Nombres" name="nombres" value={form.values.nombres} onChange={form.handleChange} error={form.errors.nombres} />
               <Input label="Apellidos" name="apellidos" value={form.values.apellidos} onChange={form.handleChange} error={form.errors.apellidos} />
               <Input label="Fecha de nacimiento" type="date" name="fechaNacimiento" value={form.values.fechaNacimiento} onChange={form.handleChange} error={form.errors.fechaNacimiento} hint={age !== null ? `Edad calculada: ${age} años` : ""} />
@@ -94,9 +100,9 @@ export default function PatientMaster() {
               <Input label="Dirección" name="direccion" value={form.values.direccion} onChange={form.handleChange} error={form.errors.direccion} />
               <Select label="Provincia" name="provincia" value={form.values.provincia} onChange={form.handleChange} error={form.errors.provincia} options={ECUADOR_PROVINCES} />
               <Select label="Ciudad" name="ciudad" value={form.values.ciudad} onChange={form.handleChange} error={form.errors.ciudad} options={CIUDADES_ECUADOR} />
-              <Input label="Teléfono" name="telefono" value={form.values.telefono} onChange={form.handleChange} error={form.errors.telefono} maxLength="10" />
+              <Input label="Teléfono" name="telefono" value={form.values.telefono} onChange={handleDigits} error={form.errors.telefono} maxLength="10" inputMode="numeric" />
               <Input label="Correo" type="email" name="correo" value={form.values.correo} onChange={form.handleChange} error={form.errors.correo} />
-              <Input label="Contacto de emergencia" name="contactoEmergencia" value={form.values.contactoEmergencia} onChange={form.handleChange} error={form.errors.contactoEmergencia} />
+              <Input label="Teléfono de emergencia" name="contactoEmergencia" value={form.values.contactoEmergencia} onChange={handleDigits} error={form.errors.contactoEmergencia} maxLength="10" inputMode="numeric" />
             </div>
           </div>
 
