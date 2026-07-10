@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import Card from "../../components/common/Card.jsx";
 import Button from "../../components/common/Button.jsx";
 import { ROUTES } from "../../utils/constants.js";
+import { ROLE_PERMISSIONS, canAccess } from "../../utils/roles.js";
+import useAuth from "../../hooks/useAuth.js";
 import { searchPatients } from "../../services/patientService.js";
 import { listConsultations } from "../../services/consultationService.js";
 import { listLaboratoryOrders } from "../../services/laboratoryService.js";
@@ -10,10 +12,12 @@ import { listAllImagingStudies } from "../../services/imagingService.js";
 import "./Dashboard.css";
 
 const quickLinks = [
-  { to: ROUTES.patient, title: "Registrar paciente maestro", text: "Alta administrativa con validación de cédula." },
-  { to: ROUTES.clinicalHistory, title: "Nueva historia clínica", text: "Ingreso completo de antecedentes y diagnósticos." },
-  { to: ROUTES.consultation, title: "Nueva consulta", text: "Evolución, signos vitales y plan terapéutico." },
-  { to: ROUTES.repository, title: "Consultar repositorio", text: "Vista longitudinal por paciente y evento clínico." },
+  { to: ROUTES.patient, title: "Registrar paciente maestro", text: "Alta administrativa con validación de cédula.", roles: ROLE_PERMISSIONS.patient },
+  { to: ROUTES.clinicalHistory, title: "Nueva historia clínica", text: "Ingreso completo de antecedentes y diagnósticos.", roles: ROLE_PERMISSIONS.clinicalHistory },
+  { to: ROUTES.consultation, title: "Nueva consulta", text: "Evolución, signos vitales y plan terapéutico.", roles: ROLE_PERMISSIONS.consultation },
+  { to: ROUTES.laboratory, title: "Laboratorio", text: "Solicitud y registro de resultados de laboratorio.", roles: ROLE_PERMISSIONS.laboratory },
+  { to: ROUTES.imaging, title: "Imagenología", text: "Solicitud y registro de estudios diagnósticos.", roles: ROLE_PERMISSIONS.imaging },
+  { to: ROUTES.repository, title: "Consultar repositorio", text: "Vista longitudinal por paciente y evento clínico.", roles: ROLE_PERMISSIONS.repository },
 ];
 
 const criticalTerms = ["urgente", "emergencia", "crítico", "critico", "metástasis", "metastasis", "cáncer", "cancer", "dolor intenso"];
@@ -48,8 +52,10 @@ function formatDate(value) {
 }
 
 export default function Dashboard() {
+  const { user } = useAuth();
   const [metrics, setMetrics] = useState(emptyMetrics);
   const [loading, setLoading] = useState(true);
+  const visibleQuickLinks = quickLinks.filter((link) => canAccess(user, link.roles));
 
   useEffect(() => {
     Promise.allSettled([
@@ -131,7 +137,7 @@ export default function Dashboard() {
       <section className="grid grid-2 dashboard-section">
         <Card title="Accesos rápidos" subtitle="Flujos frecuentes del personal asistencial">
           <div className="quick-grid">
-            {quickLinks.map((link) => (
+            {visibleQuickLinks.map((link) => (
               <Link className="quick-link" key={link.to} to={link.to}>
                 <strong>{link.title}</strong>
                 <span>{link.text}</span>

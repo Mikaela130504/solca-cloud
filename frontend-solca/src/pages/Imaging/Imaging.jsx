@@ -13,6 +13,7 @@ import { getApiErrorMessage } from "../../services/api.js";
 import { createImagingStudy } from "../../services/imagingService.js";
 import { FORMATOS_IMAGEN, HOSPITAL_BRANCHES, REGIONES_ANATOMICAS, TIPOS_ESTUDIO } from "../../utils/constants.js";
 import { toLocalDateInputValue } from "../../utils/helpers.js";
+import { ROLES } from "../../utils/roles.js";
 import { required, rule } from "../../utils/validators.js";
 
 const initialValues = {
@@ -39,12 +40,12 @@ const rules = {
   formato: [rule(required, "Seleccione el formato.")],
   sede: [rule(required, "Seleccione la sede.")],
   medico: [rule(required, "El médico responsable es obligatorio.")],
-  resultado: [rule(required, "Ingrese resultado del estudio.")],
 };
 
 export default function Imaging() {
   const form = useForm(initialValues, rules);
   const { user } = useAuth();
+  const canRegisterResults = user?.role === ROLES.admin || user?.role === ROLES.laboratorio;
   const location = useLocation();
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -109,7 +110,7 @@ export default function Imaging() {
       <div className="page-title">
         <div>
           <h1>Nuevo estudio de imagenología</h1>
-          <p>Registro de estudios diagnósticos, resultados e informe adjunto para el repositorio clínico.</p>
+          <p>{canRegisterResults ? "Registro de estudios diagnósticos, resultados e informe adjunto para el repositorio clínico." : "Solicitud de estudio diagnóstico para seguimiento clínico del paciente."}</p>
         </div>
       </div>
 
@@ -128,17 +129,19 @@ export default function Imaging() {
           </div>
           <div className="grid grid-2 form-section">
             <Input label="Indicación" type="textarea" name="indicacion" value={form.values.indicacion} onChange={form.handleChange} />
-            <Input label="Resultado" type="textarea" name="resultado" value={form.values.resultado} onChange={form.handleChange} error={form.errors.resultado} />
-            <label className="field">
-              <span className="field-label">Adjuntar archivo</span>
-              <input className="field-control" type="file" accept=".pdf,.jpg,.jpeg,.png,.dcm" onChange={handleFile} />
-              <span className="field-hint">{fileName || "PDF, imagen o DICOM."}</span>
-            </label>
+            {canRegisterResults && <Input label="Resultado" type="textarea" name="resultado" value={form.values.resultado} onChange={form.handleChange} />}
+            {canRegisterResults && (
+              <label className="field">
+                <span className="field-label">Adjuntar archivo</span>
+                <input className="field-control" type="file" accept=".pdf,.jpg,.jpeg,.png,.dcm" onChange={handleFile} />
+                <span className="field-hint">{fileName || "PDF, imagen o DICOM."}</span>
+              </label>
+            )}
             <Input label="Observaciones" type="textarea" name="observaciones" value={form.values.observaciones} onChange={form.handleChange} />
           </div>
           <div className="actions">
             <Button variant="secondary" onClick={clearForm}>Limpiar</Button>
-            <Button type="submit" loading={saving}>Guardar estudio</Button>
+            <Button type="submit" loading={saving}>{canRegisterResults ? "Guardar estudio" : "Enviar solicitud"}</Button>
           </div>
         </form>
       </Card>

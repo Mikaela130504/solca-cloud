@@ -29,9 +29,9 @@ record RegistroRequest(@NotBlank String cedula, String idPacienteRegional, @NotN
 class RegistroController {
   private final RegistroService service;
   RegistroController(RegistroService service) { this.service = service; }
-  @GetMapping @PreAuthorize("hasAnyRole('ADMIN','MEDICO')") List<RegistroDto> listar() { return service.listar(); }
-  @GetMapping("/{id}") @PreAuthorize("hasAnyRole('ADMIN','MEDICO')") RegistroDto obtener(@PathVariable("id") Long id) { return service.obtener(id); }
-  @GetMapping("/paciente/{idPacienteRegional}") @PreAuthorize("hasAnyRole('ADMIN','MEDICO')") List<RegistroDto> porPaciente(@PathVariable("idPacienteRegional") String idPacienteRegional) { return service.porPaciente(idPacienteRegional); }
+  @GetMapping @PreAuthorize("hasAnyRole('ADMIN','MEDICO','LABORATORIO')") List<RegistroDto> listar() { return service.listar(); }
+  @GetMapping("/{id}") @PreAuthorize("hasAnyRole('ADMIN','MEDICO','LABORATORIO')") RegistroDto obtener(@PathVariable("id") Long id) { return service.obtener(id); }
+  @GetMapping("/paciente/{idPacienteRegional}") @PreAuthorize("hasAnyRole('ADMIN','MEDICO','LABORATORIO')") List<RegistroDto> porPaciente(@PathVariable("idPacienteRegional") String idPacienteRegional) { return service.porPaciente(idPacienteRegional); }
   @PostMapping @ResponseStatus(HttpStatus.CREATED) @PreAuthorize("hasAnyRole('ADMIN','MEDICO')") RegistroDto crear(@Valid @RequestBody RegistroRequest request, HttpServletRequest http) { return service.crear(request, http); }
   @PutMapping("/{id}") @PreAuthorize("hasAnyRole('ADMIN','MEDICO')") RegistroDto editar(@PathVariable("id") Long id, @Valid @RequestBody RegistroRequest request, HttpServletRequest http) { return service.editar(id, request, http); }
   @DeleteMapping("/{id}") @ResponseStatus(HttpStatus.NO_CONTENT) @PreAuthorize("hasAnyRole('ADMIN','MEDICO')") void eliminar(@PathVariable("id") Long id, HttpServletRequest http) { service.eliminar(id, http); }

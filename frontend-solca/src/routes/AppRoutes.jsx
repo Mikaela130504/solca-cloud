@@ -11,6 +11,7 @@ import NotFound from "../pages/NotFound/NotFound.jsx";
 import MainLayout from "../layouts/MainLayout.jsx";
 import RutaProtegida from "./RutaProtegida.jsx";
 import { ROUTES } from "../utils/constants.js";
+import { ROLE_PERMISSIONS } from "../utils/roles.js";
 
 export default function AppRoutes() {
   return (
@@ -18,13 +19,27 @@ export default function AppRoutes() {
       <Route path={ROUTES.login} element={<Login />} />
       <Route element={<RutaProtegida />}>
         <Route element={<MainLayout />}>
-          <Route path={ROUTES.dashboard} element={<Dashboard />} />
-          <Route path={ROUTES.patient} element={<PatientMaster />} />
-          <Route path={ROUTES.clinicalHistory} element={<ClinicalHistory />} />
-          <Route path={ROUTES.consultation} element={<Consultation />} />
-          <Route path={ROUTES.laboratory} element={<Laboratory />} />
-          <Route path={ROUTES.imaging} element={<Imaging />} />
-          <Route path={ROUTES.repository} element={<Repository />} />
+          <Route element={<RutaProtegida roles={ROLE_PERMISSIONS.dashboard} />}>
+            <Route path={ROUTES.dashboard} element={<Dashboard />} />
+          </Route>
+          <Route element={<RutaProtegida roles={ROLE_PERMISSIONS.patient} />}>
+            <Route path={ROUTES.patient} element={<PatientMaster />} />
+          </Route>
+          <Route element={<RutaProtegida roles={ROLE_PERMISSIONS.clinicalHistory} />}>
+            <Route path={ROUTES.clinicalHistory} element={<ClinicalHistory />} />
+          </Route>
+          <Route element={<RutaProtegida roles={ROLE_PERMISSIONS.consultation} />}>
+            <Route path={ROUTES.consultation} element={<Consultation />} />
+          </Route>
+          <Route element={<RutaProtegida roles={ROLE_PERMISSIONS.laboratory} />}>
+            <Route path={ROUTES.laboratory} element={<Laboratory />} />
+          </Route>
+          <Route element={<RutaProtegida roles={ROLE_PERMISSIONS.imaging} />}>
+            <Route path={ROUTES.imaging} element={<Imaging />} />
+          </Route>
+          <Route element={<RutaProtegida roles={ROLE_PERMISSIONS.repository} />}>
+            <Route path={ROUTES.repository} element={<Repository />} />
+          </Route>
         </Route>
       </Route>
       <Route path="/home" element={<Navigate to={ROUTES.dashboard} replace />} />

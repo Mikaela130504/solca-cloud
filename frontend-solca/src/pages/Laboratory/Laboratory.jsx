@@ -14,6 +14,7 @@ import { getApiErrorMessage } from "../../services/api.js";
 import { createLaboratoryOrder } from "../../services/laboratoryService.js";
 import { HOSPITAL_BRANCHES, PRIORIDADES, TIPOS_LABORATORIO } from "../../utils/constants.js";
 import { toLocalDateInputValue } from "../../utils/helpers.js";
+import { ROLES } from "../../utils/roles.js";
 import { isNotFutureDate, required, rule } from "../../utils/validators.js";
 
 const initialValues = {
@@ -45,6 +46,7 @@ const rules = {
 export default function Laboratory() {
   const form = useForm(initialValues, rules);
   const { user } = useAuth();
+  const canRegisterResults = user?.role === ROLES.admin || user?.role === ROLES.laboratorio;
   const location = useLocation();
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [diagnosis, setDiagnosis] = useState(null);
@@ -118,7 +120,7 @@ export default function Laboratory() {
       <div className="page-title">
         <div>
           <h1>Nuevo laboratorio</h1>
-          <p>Solicitud de exámenes y registro de resultados clínicos asociados al paciente.</p>
+          <p>{canRegisterResults ? "Solicitud de exámenes y registro de resultados clínicos asociados al paciente." : "Solicitud de exámenes de laboratorio para seguimiento clínico del paciente."}</p>
         </div>
       </div>
 
@@ -129,7 +131,7 @@ export default function Laboratory() {
               <PatientAutocomplete selectedPatient={selectedPatient} onSelect={handlePatientSelect} error={form.errors.idPacienteRegional} />
               <Input label="Paciente seleccionado" name="paciente" value={form.values.paciente} readOnly />
               <PatientIdentifiers patient={selectedPatient} />
-              <Select label="Tipo solicitud" name="tipoSolicitud" value={form.values.tipoSolicitud} onChange={form.handleChange} error={form.errors.tipoSolicitud} options={["Solicitud nueva", "Registro de resultado", "Control de tratamiento"]} />
+              <Select label="Tipo solicitud" name="tipoSolicitud" value={form.values.tipoSolicitud} onChange={form.handleChange} error={form.errors.tipoSolicitud} options={canRegisterResults ? ["Solicitud nueva", "Registro de resultado", "Control de tratamiento"] : ["Solicitud nueva", "Control de tratamiento"]} />
               <Select label="Tipo de examen" name="tipoExamen" value={form.values.tipoExamen} onChange={form.handleChange} error={form.errors.tipoExamen} options={TIPOS_LABORATORIO} />
               <Select label="Prioridad" name="prioridad" value={form.values.prioridad} onChange={form.handleChange} options={PRIORIDADES} />
               <Input label="Fecha" type="date" name="fecha" value={form.values.fecha} onChange={form.handleChange} error={form.errors.fecha} />
@@ -138,12 +140,12 @@ export default function Laboratory() {
             </div>
             <div className="grid grid-2 form-section">
               <DiagnosisAutocomplete label="Diagnóstico presuntivo CIE-10" selected={diagnosis} onSelect={handleDiagnosis} error={form.errors.diagnosticoPresuntivo} />
-              <Input label="Resultados" type="textarea" name="resultados" value={form.values.resultados} onChange={form.handleChange} />
+              {canRegisterResults && <Input label="Resultados" type="textarea" name="resultados" value={form.values.resultados} onChange={form.handleChange} />}
               <Input label="Observaciones" type="textarea" name="observaciones" value={form.values.observaciones} onChange={form.handleChange} />
             </div>
             <div className="actions">
               <Button variant="secondary" onClick={clearForm}>Limpiar</Button>
-              <Button type="submit" loading={saving}>Guardar laboratorio</Button>
+              <Button type="submit" loading={saving}>{canRegisterResults ? "Guardar laboratorio" : "Enviar solicitud"}</Button>
             </div>
           </form>
         </Card>

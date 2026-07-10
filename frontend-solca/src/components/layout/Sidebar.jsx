@@ -1,18 +1,23 @@
 import { NavLink } from "react-router-dom";
 import { ROUTES } from "../../utils/constants.js";
+import { ROLE_PERMISSIONS, canAccess } from "../../utils/roles.js";
+import useAuth from "../../hooks/useAuth.js";
 import logo from "../../assets/imagenes/logo-solca.webp";
 
 const items = [
-  { to: ROUTES.dashboard, label: "Dashboard", icon: "▦" },
-  { to: ROUTES.patient, label: "Paciente maestro", icon: "ID" },
-  { to: ROUTES.clinicalHistory, label: "Historia clínica", icon: "HC" },
-  { to: ROUTES.consultation, label: "Nueva consulta", icon: "+" },
-  { to: ROUTES.laboratory, label: "Laboratorio", icon: "LB" },
-  { to: ROUTES.imaging, label: "Imagenología", icon: "RX" },
-  { to: ROUTES.repository, label: "Repositorio clinico", icon: "RC" },
+  { to: ROUTES.dashboard, label: "Dashboard", icon: "▦", roles: ROLE_PERMISSIONS.dashboard },
+  { to: ROUTES.patient, label: "Paciente maestro", icon: "ID", roles: ROLE_PERMISSIONS.patient },
+  { to: ROUTES.clinicalHistory, label: "Historia clínica", icon: "HC", roles: ROLE_PERMISSIONS.clinicalHistory },
+  { to: ROUTES.consultation, label: "Nueva consulta", icon: "+", roles: ROLE_PERMISSIONS.consultation },
+  { to: ROUTES.laboratory, label: "Laboratorio", icon: "LB", roles: ROLE_PERMISSIONS.laboratory },
+  { to: ROUTES.imaging, label: "Imagenología", icon: "RX", roles: ROLE_PERMISSIONS.imaging },
+  { to: ROUTES.repository, label: "Repositorio clinico", icon: "RC", roles: ROLE_PERMISSIONS.repository },
 ];
 
 export default function Sidebar() {
+  const { user } = useAuth();
+  const visibleItems = items.filter((item) => canAccess(user, item.roles));
+
   return (
     <aside className="sidebar">
       <div className="brand">
@@ -24,7 +29,7 @@ export default function Sidebar() {
       </div>
 
       <nav className="side-nav" aria-label="Navegacion principal">
-        {items.map((item) => (
+        {visibleItems.map((item) => (
           <NavLink key={item.to} to={item.to} className={({ isActive }) => (isActive ? "active" : "")}>
             <span className="nav-icon">{item.icon}</span>
             <span>{item.label}</span>

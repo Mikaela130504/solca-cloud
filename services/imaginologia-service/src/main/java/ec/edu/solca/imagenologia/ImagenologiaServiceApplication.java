@@ -31,12 +31,12 @@ record RegistroRequest(@NotBlank String cedula, String idPacienteRegional, @NotN
 class RegistroController {
   private final RegistroService service;
   RegistroController(RegistroService service) { this.service = service; }
-  @GetMapping @PreAuthorize("hasAnyRole('ADMIN','MEDICO')") List<RegistroDto> listar() { return service.listar(); }
-  @GetMapping("/{id}") @PreAuthorize("hasAnyRole('ADMIN','MEDICO')") RegistroDto obtener(@PathVariable("id") Long id) { return service.obtener(id); }
-  @GetMapping("/{id}/archivo") @PreAuthorize("hasAnyRole('ADMIN','MEDICO')") ResponseEntity<byte[]> descargar(@PathVariable("id") Long id) throws Exception { return service.descargar(id); }
-  @GetMapping("/paciente/{idPacienteRegional}") @PreAuthorize("hasAnyRole('ADMIN','MEDICO')") List<RegistroDto> porPaciente(@PathVariable("idPacienteRegional") String idPacienteRegional) { return service.porPaciente(idPacienteRegional); }
-  @PostMapping @ResponseStatus(HttpStatus.CREATED) @PreAuthorize("hasAnyRole('ADMIN','MEDICO')") RegistroDto crear(@Valid @RequestBody RegistroRequest request, HttpServletRequest http) { return service.crear(request, http); }
-  @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE) @ResponseStatus(HttpStatus.CREATED) @PreAuthorize("hasAnyRole('ADMIN','MEDICO')") RegistroDto crearConArchivo(
+  @GetMapping @PreAuthorize("hasAnyRole('ADMIN','MEDICO','LABORATORIO')") List<RegistroDto> listar() { return service.listar(); }
+  @GetMapping("/{id}") @PreAuthorize("hasAnyRole('ADMIN','MEDICO','LABORATORIO')") RegistroDto obtener(@PathVariable("id") Long id) { return service.obtener(id); }
+  @GetMapping("/{id}/archivo") @PreAuthorize("hasAnyRole('ADMIN','MEDICO','LABORATORIO')") ResponseEntity<byte[]> descargar(@PathVariable("id") Long id) throws Exception { return service.descargar(id); }
+  @GetMapping("/paciente/{idPacienteRegional}") @PreAuthorize("hasAnyRole('ADMIN','MEDICO','LABORATORIO')") List<RegistroDto> porPaciente(@PathVariable("idPacienteRegional") String idPacienteRegional) { return service.porPaciente(idPacienteRegional); }
+  @PostMapping @ResponseStatus(HttpStatus.CREATED) @PreAuthorize("hasAnyRole('ADMIN','MEDICO','LABORATORIO')") RegistroDto crear(@Valid @RequestBody RegistroRequest request, HttpServletRequest http) { return service.crear(request, http); }
+  @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE) @ResponseStatus(HttpStatus.CREATED) @PreAuthorize("hasAnyRole('ADMIN','MEDICO','LABORATORIO')") RegistroDto crearConArchivo(
     @RequestParam String cedula,
     @RequestParam(required=false) String idPacienteRegional,
     @RequestParam String fecha,
@@ -61,8 +61,8 @@ class RegistroController {
     }
     return service.crear(new RegistroRequest(cedula, idPacienteRegional, LocalDate.parse(fecha), sede, medico, null, null, null, null, null, null, null, resultado, observaciones, tipoEstudio, formato, url, regionAnatomica), http);
   }
-  @PutMapping("/{id}") @PreAuthorize("hasAnyRole('ADMIN','MEDICO')") RegistroDto editar(@PathVariable("id") Long id, @Valid @RequestBody RegistroRequest request, HttpServletRequest http) { return service.editar(id, request, http); }
-  @DeleteMapping("/{id}") @ResponseStatus(HttpStatus.NO_CONTENT) @PreAuthorize("hasAnyRole('ADMIN','MEDICO')") void eliminar(@PathVariable("id") Long id, HttpServletRequest http) { service.eliminar(id, http); }
+  @PutMapping("/{id}") @PreAuthorize("hasAnyRole('ADMIN','LABORATORIO')") RegistroDto editar(@PathVariable("id") Long id, @Valid @RequestBody RegistroRequest request, HttpServletRequest http) { return service.editar(id, request, http); }
+  @DeleteMapping("/{id}") @ResponseStatus(HttpStatus.NO_CONTENT) @PreAuthorize("hasAnyRole('ADMIN','LABORATORIO')") void eliminar(@PathVariable("id") Long id, HttpServletRequest http) { service.eliminar(id, http); }
 }
 
 @org.springframework.stereotype.Service

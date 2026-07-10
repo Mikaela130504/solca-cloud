@@ -32,8 +32,8 @@ class PacienteController {
   private final PacienteService service;
   PacienteController(PacienteService service) { this.service = service; }
   @GetMapping @PreAuthorize("hasAnyRole('ADMIN','MEDICO','LABORATORIO')") List<PacienteDto> listar(@RequestParam(defaultValue="") String q) { return service.listar(q); }
-  @PostMapping @ResponseStatus(HttpStatus.CREATED) @PreAuthorize("hasRole('ADMIN')") PacienteDto crear(@Valid @RequestBody PacienteRequest request, HttpServletRequest http) { return service.crear(request, http); }
-  @PutMapping("/{id}") @PreAuthorize("hasRole('ADMIN')") PacienteDto editar(@PathVariable("id") String id, @Valid @RequestBody PacienteRequest request, HttpServletRequest http) { return service.editar(id, request, http); }
+  @PostMapping @ResponseStatus(HttpStatus.CREATED) @PreAuthorize("hasAnyRole('ADMIN','MEDICO')") PacienteDto crear(@Valid @RequestBody PacienteRequest request, HttpServletRequest http) { return service.crear(request, http); }
+  @PutMapping("/{id}") @PreAuthorize("hasAnyRole('ADMIN','MEDICO')") PacienteDto editar(@PathVariable("id") String id, @Valid @RequestBody PacienteRequest request, HttpServletRequest http) { return service.editar(id, request, http); }
   @DeleteMapping("/{id}") @ResponseStatus(HttpStatus.NO_CONTENT) @PreAuthorize("hasRole('ADMIN')") void eliminar(@PathVariable("id") String id, HttpServletRequest http) { service.eliminar(id, http); }
   @GetMapping("/cedula/{cedula}") PacienteDto porCedula(@PathVariable("cedula") String cedula) { return service.porCedula(cedula); }
   @GetMapping("/{id}") PacienteDto porId(@PathVariable("id") String id) { return service.porId(id); }
