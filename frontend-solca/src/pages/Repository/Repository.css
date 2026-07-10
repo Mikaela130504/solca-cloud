@@ -6,6 +6,10 @@
   margin-bottom: 18px;
 }
 
+.repository-toolbar .patient-identifiers {
+  grid-column: 1 / -1;
+}
+
 .repository-main {
   margin-bottom: 18px;
 }

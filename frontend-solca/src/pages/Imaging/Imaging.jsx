@@ -4,6 +4,7 @@ import Button from "../../components/common/Button.jsx";
 import Card from "../../components/common/Card.jsx";
 import Input from "../../components/common/Input.jsx";
 import PatientAutocomplete from "../../components/common/PatientAutocomplete.jsx";
+import PatientIdentifiers from "../../components/common/PatientIdentifiers.jsx";
 import Select from "../../components/common/Select.jsx";
 import Toast from "../../components/common/Toast.jsx";
 import useAuth from "../../hooks/useAuth.js";
@@ -117,6 +118,7 @@ export default function Imaging() {
           <div className="grid grid-3 form-section">
             <PatientAutocomplete selectedPatient={selectedPatient} onSelect={handlePatientSelect} error={form.errors.idPacienteRegional} />
             <Input label="Paciente seleccionado" name="paciente" value={form.values.paciente} readOnly />
+            <PatientIdentifiers patient={selectedPatient} />
             <Select label="Tipo de estudio" name="tipoEstudio" value={form.values.tipoEstudio} onChange={form.handleChange} error={form.errors.tipoEstudio} options={TIPOS_ESTUDIO} />
             <Select label="Región anatómica" name="regionAnatomica" value={form.values.regionAnatomica} onChange={form.handleChange} error={form.errors.regionAnatomica} options={REGIONES_ANATOMICAS} />
             <Input label="Fecha" type="date" name="fecha" value={form.values.fecha} readOnly error={form.errors.fecha} />

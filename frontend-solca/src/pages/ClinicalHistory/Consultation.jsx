@@ -5,6 +5,7 @@ import Card from "../../components/common/Card.jsx";
 import DiagnosisAutocomplete from "../../components/common/DiagnosisAutocomplete.jsx";
 import Input from "../../components/common/Input.jsx";
 import PatientAutocomplete from "../../components/common/PatientAutocomplete.jsx";
+import PatientIdentifiers from "../../components/common/PatientIdentifiers.jsx";
 import Select from "../../components/common/Select.jsx";
 import Toast from "../../components/common/Toast.jsx";
 import useAuth from "../../hooks/useAuth.js";
@@ -157,6 +158,7 @@ export default function Consultation() {
           <div className="grid grid-3 form-section">
             <PatientAutocomplete selectedPatient={selectedPatient} onSelect={handlePatientSelect} error={form.errors.idPacienteRegional} />
             <Input label="Paciente seleccionado" name="paciente" value={form.values.paciente} readOnly />
+            <PatientIdentifiers patient={selectedPatient} />
             <Select label="Especialidad" name="especialidad" value={form.values.especialidad} onChange={form.handleChange} options={ESPECIALIDADES_MEDICAS} />
             <Select label="Tipo de consulta" name="tipoConsulta" value={form.values.tipoConsulta} onChange={form.handleChange} error={form.errors.tipoConsulta} options={TIPOS_CONSULTA} />
             <Select label="Sede" name="sede" value={form.values.sede} onChange={form.handleChange} error={form.errors.sede} options={HOSPITAL_BRANCHES} />

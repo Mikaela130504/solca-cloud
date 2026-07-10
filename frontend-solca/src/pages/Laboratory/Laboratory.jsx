@@ -5,6 +5,7 @@ import Card from "../../components/common/Card.jsx";
 import DiagnosisAutocomplete from "../../components/common/DiagnosisAutocomplete.jsx";
 import Input from "../../components/common/Input.jsx";
 import PatientAutocomplete from "../../components/common/PatientAutocomplete.jsx";
+import PatientIdentifiers from "../../components/common/PatientIdentifiers.jsx";
 import Select from "../../components/common/Select.jsx";
 import Toast from "../../components/common/Toast.jsx";
 import useAuth from "../../hooks/useAuth.js";
@@ -127,6 +128,7 @@ export default function Laboratory() {
             <div className="grid grid-2 form-section">
               <PatientAutocomplete selectedPatient={selectedPatient} onSelect={handlePatientSelect} error={form.errors.idPacienteRegional} />
               <Input label="Paciente seleccionado" name="paciente" value={form.values.paciente} readOnly />
+              <PatientIdentifiers patient={selectedPatient} />
               <Select label="Tipo solicitud" name="tipoSolicitud" value={form.values.tipoSolicitud} onChange={form.handleChange} error={form.errors.tipoSolicitud} options={["Solicitud nueva", "Registro de resultado", "Control de tratamiento"]} />
               <Select label="Tipo de examen" name="tipoExamen" value={form.values.tipoExamen} onChange={form.handleChange} error={form.errors.tipoExamen} options={TIPOS_LABORATORIO} />
               <Select label="Prioridad" name="prioridad" value={form.values.prioridad} onChange={form.handleChange} options={PRIORIDADES} />

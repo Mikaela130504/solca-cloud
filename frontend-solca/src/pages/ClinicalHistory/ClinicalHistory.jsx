@@ -5,6 +5,7 @@ import Card from "../../components/common/Card.jsx";
 import DiagnosisAutocomplete from "../../components/common/DiagnosisAutocomplete.jsx";
 import Input from "../../components/common/Input.jsx";
 import PatientAutocomplete from "../../components/common/PatientAutocomplete.jsx";
+import PatientIdentifiers from "../../components/common/PatientIdentifiers.jsx";
 import Select from "../../components/common/Select.jsx";
 import Toast from "../../components/common/Toast.jsx";
 import useAuth from "../../hooks/useAuth.js";
@@ -237,6 +238,7 @@ export default function ClinicalHistory() {
             <div className="grid grid-2">
               <PatientAutocomplete selectedPatient={selectedPatient} onSelect={handlePatientSelect} error={form.errors.idPacienteRegional} />
               <Input label="Paciente seleccionado" name="paciente" value={form.values.paciente} readOnly />
+              <PatientIdentifiers patient={selectedPatient} />
               <Input label="Motivo de consulta" type="textarea" name="motivoConsulta" value={form.values.motivoConsulta} onChange={form.handleChange} error={form.errors.motivoConsulta} />
               <Input label="Enfermedad actual" type="textarea" name="enfermedadActual" value={form.values.enfermedadActual} onChange={form.handleChange} error={form.errors.enfermedadActual} />
             </div>

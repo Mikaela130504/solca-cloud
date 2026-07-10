@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import Button from "../../components/common/Button.jsx";
 import Loader from "../../components/common/Loader.jsx";
 import PatientAutocomplete from "../../components/common/PatientAutocomplete.jsx";
+import PatientIdentifiers from "../../components/common/PatientIdentifiers.jsx";
 import ClinicalHistoryView from "../../components/repository/ClinicalHistoryView.jsx";
 import ExpandableRecords from "../../components/repository/ExpandableRecords.jsx";
 import PatientSummary from "../../components/repository/PatientSummary.jsx";
@@ -53,6 +54,7 @@ export default function Repository() {
 
       <form className="repository-toolbar" onSubmit={handleSearch}>
         <PatientAutocomplete selectedPatient={selectedPatient} onSelect={setSelectedPatient} label="Buscar paciente" />
+        <PatientIdentifiers patient={selectedPatient} />
         <Button type="submit" loading={loading}>Buscar</Button>
       </form>
 
