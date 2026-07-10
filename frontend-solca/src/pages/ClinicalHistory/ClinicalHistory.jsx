@@ -12,10 +12,10 @@ import useForm from "../../hooks/useForm.js";
 import { getApiErrorMessage } from "../../services/api.js";
 import { createClinicalHistory } from "../../services/consultationService.js";
 import { ESPECIALIDADES_MEDICAS, HOSPITAL_BRANCHES, ROUTES } from "../../utils/constants.js";
-import { calculateImc } from "../../utils/helpers.js";
+import { calculateImc, toLocalDateInputValue } from "../../utils/helpers.js";
 import { isNotFutureDate, required, rule } from "../../utils/validators.js";
 
-const currentDate = () => new Date().toISOString().slice(0, 10);
+const currentDate = () => toLocalDateInputValue();
 const currentTime = () => new Date().toTimeString().slice(0, 5);
 
 const initialValues = {

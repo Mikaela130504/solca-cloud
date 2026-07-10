@@ -11,6 +11,7 @@ import useForm from "../../hooks/useForm.js";
 import { getApiErrorMessage } from "../../services/api.js";
 import { createImagingStudy } from "../../services/imagingService.js";
 import { FORMATOS_IMAGEN, HOSPITAL_BRANCHES, REGIONES_ANATOMICAS, TIPOS_ESTUDIO } from "../../utils/constants.js";
+import { toLocalDateInputValue } from "../../utils/helpers.js";
 import { required, rule } from "../../utils/validators.js";
 
 const initialValues = {
@@ -19,7 +20,7 @@ const initialValues = {
   paciente: "",
   tipoEstudio: "",
   regionAnatomica: "",
-  fecha: new Date().toISOString().slice(0, 10),
+  fecha: toLocalDateInputValue(),
   formato: "",
   sede: "",
   medico: "",

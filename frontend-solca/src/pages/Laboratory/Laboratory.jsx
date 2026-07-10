@@ -12,6 +12,7 @@ import useForm from "../../hooks/useForm.js";
 import { getApiErrorMessage } from "../../services/api.js";
 import { createLaboratoryOrder } from "../../services/laboratoryService.js";
 import { HOSPITAL_BRANCHES, PRIORIDADES, TIPOS_LABORATORIO } from "../../utils/constants.js";
+import { toLocalDateInputValue } from "../../utils/helpers.js";
 import { isNotFutureDate, required, rule } from "../../utils/validators.js";
 
 const initialValues = {
@@ -21,7 +22,7 @@ const initialValues = {
   tipoSolicitud: "",
   tipoExamen: "",
   prioridad: "",
-  fecha: new Date().toISOString().slice(0, 10),
+  fecha: toLocalDateInputValue(),
   sede: "",
   medico: "",
   diagnosticoPresuntivo: "",
