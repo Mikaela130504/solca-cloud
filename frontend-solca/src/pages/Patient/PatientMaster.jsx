@@ -6,7 +6,7 @@ import Select from "../../components/common/Select.jsx";
 import Toast from "../../components/common/Toast.jsx";
 import useForm from "../../hooks/useForm.js";
 import { getApiErrorMessage } from "../../services/api.js";
-import { createPatient } from "../../services/patientService.js";
+import { createPatient, getPatientByCedula } from "../../services/patientService.js";
 import { BLOOD_TYPES, CIUDADES_ECUADOR, ECUADOR_PROVINCES, ESTADOS_CIVILES, SEGUROS_MEDICOS, SEXOS } from "../../utils/constants.js";
 import { calculateAge, isEmail, isNotFutureDate, isPhone, isValidEcuadorianCedula, onlyLetters, required, rule } from "../../utils/validators.js";
 
@@ -72,7 +72,35 @@ export default function PatientMaster() {
       setToast({ message: "Paciente maestro registrado correctamente.", type: "success" });
       form.reset();
     } catch (error) {
-      setToast({ message: getApiErrorMessage(error, "No fue posible registrar el paciente."), type: "error" });
+      if (error?.response?.status === 409) {
+        try {
+          const existingPatient = await getPatientByCedula(form.values.cedula);
+          form.setValues((current) => ({
+            ...current,
+            cedula: existingPatient.cedula || "",
+            nombres: existingPatient.nombres || "",
+            apellidos: existingPatient.apellidos || "",
+            fechaNacimiento: existingPatient.fechaNacimiento || "",
+            sexo: existingPatient.sexo || "",
+            estadoCivil: existingPatient.estadoCivil || "",
+            direccion: existingPatient.direccion || "",
+            provincia: existingPatient.provincia || "",
+            ciudad: existingPatient.ciudad || "",
+            telefono: existingPatient.telefono || "",
+            correo: existingPatient.correo || "",
+            contactoEmergencia: existingPatient.contactoEmergencia || "",
+            seguro: existingPatient.seguro || "",
+            tipoSangre: existingPatient.tipoSangre || "",
+            nacionalidad: existingPatient.nacionalidad || "",
+            observaciones: existingPatient.observaciones || "",
+          }));
+        } catch {
+          // Keep the entered values if the lookup fails; the duplicate message is still useful.
+        }
+        setToast({ message: "Paciente ya existe. Se cargó la información registrada.", type: "error" });
+      } else {
+        setToast({ message: getApiErrorMessage(error, "No fue posible registrar el paciente."), type: "error" });
+      }
     } finally {
       setSaving(false);
     }
