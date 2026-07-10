@@ -5,6 +5,7 @@ import Input from "../../components/common/Input.jsx";
 import Select from "../../components/common/Select.jsx";
 import Toast from "../../components/common/Toast.jsx";
 import useForm from "../../hooks/useForm.js";
+import { getApiErrorMessage } from "../../services/api.js";
 import { createPatient } from "../../services/patientService.js";
 import { BLOOD_TYPES, CIUDADES_ECUADOR, ECUADOR_PROVINCES, ESTADOS_CIVILES, SEGUROS_MEDICOS, SEXOS } from "../../utils/constants.js";
 import { calculateAge, isEmail, isNotFutureDate, isPhone, isValidEcuadorianCedula, onlyLetters, required, rule } from "../../utils/validators.js";
@@ -53,7 +54,7 @@ const rules = {
 export default function PatientMaster() {
   const form = useForm(initialValues, rules);
   const [saving, setSaving] = useState(false);
-  const [toast, setToast] = useState("");
+  const [toast, setToast] = useState({ message: "", type: "success" });
   const age = calculateAge(form.values.fechaNacimiento);
 
   const handleDigits = (event) => {
@@ -66,10 +67,15 @@ export default function PatientMaster() {
     event.preventDefault();
     if (!form.validate()) return;
     setSaving(true);
-    await createPatient({ ...form.values, edad: age });
-    setSaving(false);
-    setToast("Paciente maestro registrado correctamente.");
-    form.reset();
+    try {
+      await createPatient({ ...form.values, edad: age });
+      setToast({ message: "Paciente maestro registrado correctamente.", type: "success" });
+      form.reset();
+    } catch (error) {
+      setToast({ message: getApiErrorMessage(error, "No fue posible registrar el paciente."), type: "error" });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -123,7 +129,7 @@ export default function PatientMaster() {
         </form>
       </Card>
 
-      <Toast message={toast} onClose={() => setToast("")} />
+      <Toast message={toast.message} type={toast.type} onClose={() => setToast({ message: "", type: "success" })} />
     </>
   );
 }

@@ -8,6 +8,7 @@ import Select from "../../components/common/Select.jsx";
 import Toast from "../../components/common/Toast.jsx";
 import useAuth from "../../hooks/useAuth.js";
 import useForm from "../../hooks/useForm.js";
+import { getApiErrorMessage } from "../../services/api.js";
 import { createImagingStudy } from "../../services/imagingService.js";
 import { FORMATOS_IMAGEN, HOSPITAL_BRANCHES, REGIONES_ANATOMICAS, TIPOS_ESTUDIO } from "../../utils/constants.js";
 import { required, rule } from "../../utils/validators.js";
@@ -45,7 +46,7 @@ export default function Imaging() {
   const location = useLocation();
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [toast, setToast] = useState("");
+  const [toast, setToast] = useState({ message: "", type: "success" });
   const [fileName, setFileName] = useState("");
 
   useEffect(() => {
@@ -88,12 +89,17 @@ export default function Imaging() {
     event.preventDefault();
     if (!form.validate()) return;
     setSaving(true);
-    await createImagingStudy({
-      ...form.values,
-      observaciones: `Indicación: ${form.values.indicacion || "N/A"}. ${form.values.observaciones || ""}`,
-    });
-    setSaving(false);
-    setToast("Estudio de imagenología registrado.");
+    try {
+      await createImagingStudy({
+        ...form.values,
+        observaciones: `Indicación: ${form.values.indicacion || "N/A"}. ${form.values.observaciones || ""}`,
+      });
+      setToast({ message: "Estudio de imagenología registrado.", type: "success" });
+    } catch (error) {
+      setToast({ message: getApiErrorMessage(error, "No fue posible registrar imagenología."), type: "error" });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -133,7 +139,7 @@ export default function Imaging() {
           </div>
         </form>
       </Card>
-      <Toast message={toast} onClose={() => setToast("")} />
+      <Toast message={toast.message} type={toast.type} onClose={() => setToast({ message: "", type: "success" })} />
     </>
   );
 }

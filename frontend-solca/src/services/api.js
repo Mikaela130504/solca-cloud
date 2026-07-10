@@ -32,6 +32,19 @@ export function createApiClient(baseURL) {
   return client;
 }
 
+export function getApiErrorMessage(error, fallback = "No fue posible completar la operación.") {
+  const data = error?.response?.data;
+  if (typeof data === "string" && data.trim()) return data;
+  if (data?.message) return data.message;
+  if (data?.error && data?.status) return `${data.error} (${data.status})`;
+  if (error?.response?.status === 409) return "El registro ya existe o entra en conflicto con datos guardados.";
+  if (error?.response?.status === 400) return "Revise los datos ingresados.";
+  if (error?.response?.status === 403) return "No tiene permisos para realizar esta acción.";
+  if (error?.response?.status === 401) return "La sesión no es válida. Inicie sesión nuevamente.";
+  if (error?.code === "ECONNABORTED") return "El servicio tardó demasiado en responder.";
+  return error?.message || fallback;
+}
+
 export const createServiceError = (message) => ({
   message,
   timestamp: new Date().toISOString(),

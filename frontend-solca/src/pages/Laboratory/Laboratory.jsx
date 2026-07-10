@@ -9,6 +9,7 @@ import Select from "../../components/common/Select.jsx";
 import Toast from "../../components/common/Toast.jsx";
 import useAuth from "../../hooks/useAuth.js";
 import useForm from "../../hooks/useForm.js";
+import { getApiErrorMessage } from "../../services/api.js";
 import { createLaboratoryOrder } from "../../services/laboratoryService.js";
 import { HOSPITAL_BRANCHES, PRIORIDADES, TIPOS_LABORATORIO } from "../../utils/constants.js";
 import { isNotFutureDate, required, rule } from "../../utils/validators.js";
@@ -46,7 +47,7 @@ export default function Laboratory() {
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [diagnosis, setDiagnosis] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [toast, setToast] = useState("");
+  const [toast, setToast] = useState({ message: "", type: "success" });
 
   useEffect(() => {
     const patient = location.state?.patient;
@@ -95,14 +96,19 @@ export default function Laboratory() {
     event.preventDefault();
     if (!form.validate()) return;
     setSaving(true);
-    await createLaboratoryOrder({
-      ...form.values,
-      diagnostico: `${form.values.cie10} - ${form.values.diagnosticoPresuntivo}`,
-      resultado: form.values.resultados,
-      observaciones: `Tipo solicitud: ${form.values.tipoSolicitud}. Prioridad: ${form.values.prioridad || "N/A"}. ${form.values.observaciones || ""}`,
-    });
-    setSaving(false);
-    setToast("Solicitud o resultado de laboratorio registrado.");
+    try {
+      await createLaboratoryOrder({
+        ...form.values,
+        diagnostico: `${form.values.cie10} - ${form.values.diagnosticoPresuntivo}`,
+        resultado: form.values.resultados,
+        observaciones: `Tipo solicitud: ${form.values.tipoSolicitud}. Prioridad: ${form.values.prioridad || "N/A"}. ${form.values.observaciones || ""}`,
+      });
+      setToast({ message: "Solicitud o resultado de laboratorio registrado.", type: "success" });
+    } catch (error) {
+      setToast({ message: getApiErrorMessage(error, "No fue posible registrar laboratorio."), type: "error" });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -139,7 +145,7 @@ export default function Laboratory() {
           </form>
         </Card>
       </div>
-      <Toast message={toast} onClose={() => setToast("")} />
+      <Toast message={toast.message} type={toast.type} onClose={() => setToast({ message: "", type: "success" })} />
     </>
   );
 }

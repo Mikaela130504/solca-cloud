@@ -9,6 +9,7 @@ import Select from "../../components/common/Select.jsx";
 import Toast from "../../components/common/Toast.jsx";
 import useAuth from "../../hooks/useAuth.js";
 import useForm from "../../hooks/useForm.js";
+import { getApiErrorMessage } from "../../services/api.js";
 import { createConsultation } from "../../services/consultationService.js";
 import { ESPECIALIDADES_MEDICAS, HOSPITAL_BRANCHES, TIPOS_CONSULTA } from "../../utils/constants.js";
 import { calculateImc } from "../../utils/helpers.js";
@@ -72,7 +73,7 @@ export default function Consultation() {
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [diagnosis, setDiagnosis] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [toast, setToast] = useState("");
+  const [toast, setToast] = useState({ message: "", type: "success" });
 
   useEffect(() => {
     const imc = calculateImc(form.values.peso, form.values.talla);
@@ -127,14 +128,19 @@ export default function Consultation() {
     event.preventDefault();
     if (!form.validate()) return;
     setSaving(true);
-    await createConsultation({
-      ...form.values,
-      diagnostico: `${form.values.cie10} - ${form.values.diagnostico}`,
-      tratamiento: form.values.plan,
-      observaciones: `Medicación: ${form.values.medicacion || "N/A"}\nPróximo control: ${form.values.proximoControl || "N/A"}\nSignos vitales: Peso ${form.values.peso || "N/A"} kg; Talla ${form.values.talla || "N/A"} cm; IMC ${form.values.imc || "N/A"}; Temperatura ${form.values.temperatura || "N/A"}; PA ${form.values.presionArterial || "N/A"}; FC ${form.values.frecuenciaCardiaca || "N/A"}; FR ${form.values.frecuenciaRespiratoria || "N/A"}; Saturación ${form.values.saturacion || "N/A"}.`,
-    });
-    setSaving(false);
-    setToast("Consulta registrada correctamente.");
+    try {
+      await createConsultation({
+        ...form.values,
+        diagnostico: `${form.values.cie10} - ${form.values.diagnostico}`,
+        tratamiento: form.values.plan,
+        observaciones: `Medicación: ${form.values.medicacion || "N/A"}\nPróximo control: ${form.values.proximoControl || "N/A"}\nSignos vitales: Peso ${form.values.peso || "N/A"} kg; Talla ${form.values.talla || "N/A"} cm; IMC ${form.values.imc || "N/A"}; Temperatura ${form.values.temperatura || "N/A"}; PA ${form.values.presionArterial || "N/A"}; FC ${form.values.frecuenciaCardiaca || "N/A"}; FR ${form.values.frecuenciaRespiratoria || "N/A"}; Saturación ${form.values.saturacion || "N/A"}.`,
+      });
+      setToast({ message: "Consulta registrada correctamente.", type: "success" });
+    } catch (error) {
+      setToast({ message: getApiErrorMessage(error, "No fue posible registrar la consulta."), type: "error" });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -191,7 +197,7 @@ export default function Consultation() {
           </div>
         </form>
       </Card>
-      <Toast message={toast} onClose={() => setToast("")} />
+      <Toast message={toast.message} type={toast.type} onClose={() => setToast({ message: "", type: "success" })} />
     </>
   );
 }

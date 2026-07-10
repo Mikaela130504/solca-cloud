@@ -9,6 +9,7 @@ import Select from "../../components/common/Select.jsx";
 import Toast from "../../components/common/Toast.jsx";
 import useAuth from "../../hooks/useAuth.js";
 import useForm from "../../hooks/useForm.js";
+import { getApiErrorMessage } from "../../services/api.js";
 import { createClinicalHistory } from "../../services/consultationService.js";
 import { ESPECIALIDADES_MEDICAS, HOSPITAL_BRANCHES, ROUTES } from "../../utils/constants.js";
 import { calculateImc } from "../../utils/helpers.js";
@@ -132,7 +133,7 @@ export default function ClinicalHistory() {
   const [primaryDiagnosis, setPrimaryDiagnosis] = useState(null);
   const [secondaryDiagnosis, setSecondaryDiagnosis] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [toast, setToast] = useState("");
+  const [toast, setToast] = useState({ message: "", type: "success" });
 
   useEffect(() => {
     const imc = calculateImc(form.values.peso, form.values.talla);
@@ -180,7 +181,7 @@ export default function ClinicalHistory() {
 
   const goToRequest = (route) => {
     if (!selectedPatient) {
-      setToast("Seleccione un paciente antes de solicitar.");
+      setToast({ message: "Seleccione un paciente antes de solicitar.", type: "error" });
       return;
     }
     navigate(route, {
@@ -204,15 +205,20 @@ export default function ClinicalHistory() {
     event.preventDefault();
     if (!form.validate()) return;
     setSaving(true);
-    await createClinicalHistory({
-      ...form.values,
-      observaciones: buildObservations(form.values),
-      tratamiento: form.values.tratamiento,
-      diagnosticoPrincipal: `${form.values.cie10} - ${form.values.diagnosticoPrincipal}`,
-      diagnosticosSecundarios: form.values.cie10Secundario ? `${form.values.cie10Secundario} - ${form.values.diagnosticoSecundario}` : "",
-    });
-    setSaving(false);
-    setToast("Historia clínica registrada correctamente.");
+    try {
+      await createClinicalHistory({
+        ...form.values,
+        observaciones: buildObservations(form.values),
+        tratamiento: form.values.tratamiento,
+        diagnosticoPrincipal: `${form.values.cie10} - ${form.values.diagnosticoPrincipal}`,
+        diagnosticosSecundarios: form.values.cie10Secundario ? `${form.values.cie10Secundario} - ${form.values.diagnosticoSecundario}` : "",
+      });
+      setToast({ message: "Historia clínica registrada correctamente.", type: "success" });
+    } catch (error) {
+      setToast({ message: getApiErrorMessage(error, "No fue posible registrar la historia clínica."), type: "error" });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -351,7 +357,7 @@ export default function ClinicalHistory() {
           </div>
         </form>
       </Card>
-      <Toast message={toast} onClose={() => setToast("")} />
+      <Toast message={toast.message} type={toast.type} onClose={() => setToast({ message: "", type: "success" })} />
     </>
   );
 }
