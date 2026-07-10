@@ -13,8 +13,8 @@ export default function PatientIdentifiers({ patient }) {
         <span>Nº historia clínica</span>
         <strong>
           {historias.length > 0
-            ? historias.map((item) => item.identificadorHistoriaLocal).join(", ")
-            : "Sin historia local"}
+            ? historias.map((item) => `${item.sede}: ${item.identificadorHistoriaLocal}`).join(", ")
+            : "Pendiente de sincronización"}
         </strong>
       </div>
     </div>

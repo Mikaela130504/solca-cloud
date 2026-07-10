@@ -18,11 +18,11 @@ import java.util.*;
 @SpringBootApplication(scanBasePackages = "ec.edu.solca")
 public class PacienteServiceApplication {
   public static void main(String[] args) { SpringApplication.run(PacienteServiceApplication.class, args); }
-  @Bean CommandLineRunner schema(JdbcTemplate jdbc) { return args -> new PacienteRepository(jdbc).schema(); }
+  @Bean CommandLineRunner schema(JdbcTemplate jdbc) { return args -> { PacienteRepository repo = new PacienteRepository(jdbc); repo.schema(); repo.normalizarSedesSinDato(); repo.sincronizarHistoriasLocales(); }; }
 }
 
 record PacienteDto(Long id, String idPacienteRegional, String cedula, String nombres, String apellidos, LocalDate fechaNacimiento, Integer edad, String sexo, String estadoCivil, String direccion, String provincia, String ciudad, String telefono, String correo, String contactoEmergencia, String seguro, String tipoSangre, String nacionalidad, String observaciones, String sede, List<HistoriaLocalDto> historiasLocales) {}
-record PacienteRequest(@NotBlank @Pattern(regexp="\\d{10}") String cedula, @NotBlank @Pattern(regexp="[A-Za-zÁÉÍÓÚáéíóúÑñÜü\\s]+") @Size(max=80) String nombres, @NotBlank @Pattern(regexp="[A-Za-zÁÉÍÓÚáéíóúÑñÜü\\s]+") @Size(max=80) String apellidos, @NotNull LocalDate fechaNacimiento, @NotBlank String sexo, @NotBlank String estadoCivil, @NotBlank String direccion, @NotBlank String provincia, @NotBlank String ciudad, @NotBlank @Pattern(regexp="\\d{10}") String telefono, @NotBlank @Email String correo, @NotBlank @Pattern(regexp="\\d{10}") String contactoEmergencia, @NotBlank String seguro, @NotBlank String tipoSangre, @NotBlank @Pattern(regexp="[A-Za-zÁÉÍÓÚáéíóúÑñÜü\\s]+") String nacionalidad, String observaciones, String sede) {}
+record PacienteRequest(@NotBlank @Pattern(regexp="\\d{10}") String cedula, @NotBlank @Pattern(regexp="[A-Za-zÁÉÍÓÚáéíóúÑñÜü\\s]+") @Size(max=80) String nombres, @NotBlank @Pattern(regexp="[A-Za-zÁÉÍÓÚáéíóúÑñÜü\\s]+") @Size(max=80) String apellidos, @NotNull LocalDate fechaNacimiento, @NotBlank String sexo, @NotBlank String estadoCivil, @NotBlank String direccion, @NotBlank String provincia, @NotBlank String ciudad, @NotBlank @Pattern(regexp="\\d{10}") String telefono, @NotBlank @Email String correo, @NotBlank @Pattern(regexp="\\d{10}") String contactoEmergencia, @NotBlank String seguro, @NotBlank String tipoSangre, @NotBlank @Pattern(regexp="[A-Za-zÁÉÍÓÚáéíóúÑñÜü\\s]+") String nacionalidad, String observaciones, @NotBlank String sede) {}
 record HistoriaLocalRequest(@NotBlank String sede, @NotBlank String identificadorHistoriaLocal) {}
 record HistoriaLocalDto(String sede, String identificadorHistoriaLocal) {}
 
@@ -76,12 +76,50 @@ class PacienteRepository {
     jdbc.execute("CREATE INDEX IF NOT EXISTS idx_pacientes_cedula ON pacientes(cedula)");
     Auditoria.crearTabla(jdbc);
   }
-  String siguienteIdRegional() { Integer next = jdbc.queryForObject("SELECT COALESCE(MAX(CAST(SUBSTR(id_paciente_regional,5) AS INTEGER)),0)+1 FROM pacientes", Integer.class); return "PAC-" + String.format("%07d", next); }
+  String siguienteIdRegional() {
+    int next = jdbc.queryForList("SELECT id_paciente_regional FROM pacientes", String.class).stream()
+      .map(PacienteRepository::numeroDesdeIdentificador)
+      .max(Integer::compareTo)
+      .orElse(0) + 1;
+    return "PAC" + String.format("%09d", next);
+  }
+  String siguienteHistoriaLocal(String sede) {
+    int next = jdbc.queryForList("SELECT identificador_historia_local FROM historias_clinicas_locales WHERE sede=?", String.class, sede).stream()
+      .map(PacienteRepository::numeroDesdeIdentificador)
+      .max(Integer::compareTo)
+      .orElse(0) + 1;
+    return String.format("%07d", next);
+  }
+  static int numeroDesdeIdentificador(String value) {
+    if (value == null) return 0;
+    String digits = value.replaceAll("\\D", "");
+    if (digits.isBlank()) return 0;
+    try { return Integer.parseInt(digits); } catch (NumberFormatException ex) { return 0; }
+  }
   boolean existeCedula(String cedula) { return jdbc.queryForObject("SELECT COUNT(*) FROM pacientes WHERE cedula=?", Integer.class, cedula) > 0; }
-  PacienteDto crear(String id, PacienteRequest r) { jdbc.update("INSERT INTO pacientes(id_paciente_regional,cedula,nombres,apellidos,fecha_nacimiento,edad,sexo,estado_civil,direccion,provincia,ciudad,telefono,correo,contacto_emergencia,seguro,tipo_sangre,nacionalidad,observaciones,sede) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", id,r.cedula(),r.nombres(),r.apellidos(),r.fechaNacimiento().toString(),edad(r.fechaNacimiento()),r.sexo(),r.estadoCivil(),r.direccion(),r.provincia(),r.ciudad(),r.telefono(),r.correo(),r.contactoEmergencia(),r.seguro(),r.tipoSangre(),r.nacionalidad(),r.observaciones(),r.sede()); return porId(id).orElseThrow(); }
+  PacienteDto crear(String id, PacienteRequest r) {
+    jdbc.update("INSERT INTO pacientes(id_paciente_regional,cedula,nombres,apellidos,fecha_nacimiento,edad,sexo,estado_civil,direccion,provincia,ciudad,telefono,correo,contacto_emergencia,seguro,tipo_sangre,nacionalidad,observaciones,sede) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", id,r.cedula(),r.nombres(),r.apellidos(),r.fechaNacimiento().toString(),edad(r.fechaNacimiento()),r.sexo(),r.estadoCivil(),r.direccion(),r.provincia(),r.ciudad(),r.telefono(),r.correo(),r.contactoEmergencia(),r.seguro(),r.tipoSangre(),r.nacionalidad(),r.observaciones(),r.sede());
+    asociarSiNoExiste(id, r.sede());
+    return porId(id).orElseThrow();
+  }
   PacienteDto editar(String id, PacienteRequest r) { jdbc.update("UPDATE pacientes SET cedula=?,nombres=?,apellidos=?,fecha_nacimiento=?,edad=?,sexo=?,estado_civil=?,direccion=?,provincia=?,ciudad=?,telefono=?,correo=?,contacto_emergencia=?,seguro=?,tipo_sangre=?,nacionalidad=?,observaciones=?,sede=? WHERE id_paciente_regional=?", r.cedula(),r.nombres(),r.apellidos(),r.fechaNacimiento().toString(),edad(r.fechaNacimiento()),r.sexo(),r.estadoCivil(),r.direccion(),r.provincia(),r.ciudad(),r.telefono(),r.correo(),r.contactoEmergencia(),r.seguro(),r.tipoSangre(),r.nacionalidad(),r.observaciones(),r.sede(),id); return porId(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND)); }
   void eliminar(String id) { if (jdbc.update("DELETE FROM pacientes WHERE id_paciente_regional=?", id) == 0) throw new ResponseStatusException(HttpStatus.NOT_FOUND); }
   void asociar(String id, HistoriaLocalRequest r) { porId(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND)); jdbc.update("INSERT INTO historias_clinicas_locales(id_paciente_regional,sede,identificador_historia_local) VALUES (?,?,?)", id, r.sede(), r.identificadorHistoriaLocal()); }
+  void asociarSiNoExiste(String id, String sede) {
+    if (sede == null || sede.isBlank()) return;
+    Integer existe = jdbc.queryForObject("SELECT COUNT(*) FROM historias_clinicas_locales WHERE id_paciente_regional=? AND sede=?", Integer.class, id, sede);
+    if (existe != null && existe > 0) return;
+    jdbc.update("INSERT INTO historias_clinicas_locales(id_paciente_regional,sede,identificador_historia_local) VALUES (?,?,?)", id, sede, siguienteHistoriaLocal(sede));
+  }
+  void sincronizarHistoriasLocales() {
+    List<Map<String,Object>> pacientes = jdbc.queryForList("SELECT id_paciente_regional, sede FROM pacientes WHERE sede IS NOT NULL AND TRIM(sede) <> ''");
+    for (Map<String,Object> paciente : pacientes) {
+      asociarSiNoExiste(String.valueOf(paciente.get("id_paciente_regional")), String.valueOf(paciente.get("sede")));
+    }
+  }
+  void normalizarSedesSinDato() {
+    jdbc.update("UPDATE pacientes SET sede='SOLCA Quito' WHERE sede IS NULL OR TRIM(sede) = ''");
+  }
   List<PacienteDto> listar(String q) { String like = "%" + q + "%"; return jdbc.query("SELECT * FROM pacientes WHERE nombres LIKE ? OR apellidos LIKE ? OR cedula LIKE ? OR id_paciente_regional LIKE ? ORDER BY apellidos,nombres", this::map, like, like, like, like); }
   Optional<PacienteDto> porCedula(String cedula) { return jdbc.query("SELECT * FROM pacientes WHERE cedula=?", this::map, cedula).stream().findFirst(); }
   Optional<PacienteDto> porId(String id) { return jdbc.query("SELECT * FROM pacientes WHERE id_paciente_regional=?", this::map, id).stream().findFirst(); }

@@ -10,7 +10,7 @@ export default function ClinicalHistoryView({ history, historiasLocales = [] }) 
           <p>
             {historiasLocales.length > 0
               ? historiasLocales.map((item) => `${item.sede}: ${item.identificadorHistoriaLocal}`).join(" · ")
-              : "Sin historias locales registradas"}
+              : "Pendiente de sincronización"}
           </p>
         </article>
         {historiasLocales.length > 0 && (

@@ -2,12 +2,13 @@ import { useState } from "react";
 import Button from "../../components/common/Button.jsx";
 import Card from "../../components/common/Card.jsx";
 import Input from "../../components/common/Input.jsx";
+import PatientIdentifiers from "../../components/common/PatientIdentifiers.jsx";
 import Select from "../../components/common/Select.jsx";
 import Toast from "../../components/common/Toast.jsx";
 import useForm from "../../hooks/useForm.js";
 import { getApiErrorMessage } from "../../services/api.js";
 import { createPatient, getPatientByCedula } from "../../services/patientService.js";
-import { BLOOD_TYPES, CIUDADES_ECUADOR, ECUADOR_PROVINCES, ESTADOS_CIVILES, SEGUROS_MEDICOS, SEXOS } from "../../utils/constants.js";
+import { BLOOD_TYPES, CIUDADES_ECUADOR, ECUADOR_PROVINCES, ESTADOS_CIVILES, HOSPITAL_BRANCHES, SEGUROS_MEDICOS, SEXOS } from "../../utils/constants.js";
 import { calculateAge, isEmail, isNotFutureDate, isPhone, isValidEcuadorianCedula, onlyLetters, required, rule } from "../../utils/validators.js";
 
 const initialValues = {
@@ -27,6 +28,7 @@ const initialValues = {
   tipoSangre: "",
   nacionalidad: "",
   observaciones: "",
+  sede: "",
 };
 
 const rules = {
@@ -49,12 +51,14 @@ const rules = {
   seguro: [rule(required, "El seguro es obligatorio.")],
   tipoSangre: [rule(required, "Seleccione el tipo de sangre.")],
   nacionalidad: [rule(required, "La nacionalidad es obligatoria."), rule(onlyLetters, "Use solo letras en nacionalidad.")],
+  sede: [rule(required, "Seleccione la sede donde se registra el paciente.")],
 };
 
 export default function PatientMaster() {
   const form = useForm(initialValues, rules);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState({ message: "", type: "success" });
+  const [loadedPatient, setLoadedPatient] = useState(null);
   const age = calculateAge(form.values.fechaNacimiento);
 
   const handleDigits = (event) => {
@@ -68,13 +72,34 @@ export default function PatientMaster() {
     if (!form.validate()) return;
     setSaving(true);
     try {
-      await createPatient({ ...form.values, edad: age });
+      const createdPatient = await createPatient({ ...form.values, edad: age });
+      setLoadedPatient(createdPatient);
+      form.setValues((current) => ({
+        ...current,
+        cedula: createdPatient.cedula || "",
+        nombres: createdPatient.nombres || "",
+        apellidos: createdPatient.apellidos || "",
+        fechaNacimiento: createdPatient.fechaNacimiento || "",
+        sexo: createdPatient.sexo || "",
+        estadoCivil: createdPatient.estadoCivil || "",
+        direccion: createdPatient.direccion || "",
+        provincia: createdPatient.provincia || "",
+        ciudad: createdPatient.ciudad || "",
+        telefono: createdPatient.telefono || "",
+        correo: createdPatient.correo || "",
+        contactoEmergencia: createdPatient.contactoEmergencia || "",
+        seguro: createdPatient.seguro || "",
+        tipoSangre: createdPatient.tipoSangre || "",
+        nacionalidad: createdPatient.nacionalidad || "",
+        observaciones: createdPatient.observaciones || "",
+        sede: createdPatient.sede || "",
+      }));
       setToast({ message: "Paciente maestro registrado correctamente.", type: "success" });
-      form.reset();
     } catch (error) {
       if (error?.response?.status === 409) {
         try {
           const existingPatient = await getPatientByCedula(form.values.cedula);
+          setLoadedPatient(existingPatient);
           form.setValues((current) => ({
             ...current,
             cedula: existingPatient.cedula || "",
@@ -93,6 +118,7 @@ export default function PatientMaster() {
             tipoSangre: existingPatient.tipoSangre || "",
             nacionalidad: existingPatient.nacionalidad || "",
             observaciones: existingPatient.observaciones || "",
+            sede: existingPatient.sede || "",
           }));
         } catch {
           // Keep the entered values if the lookup fails; the duplicate message is still useful.
@@ -104,6 +130,11 @@ export default function PatientMaster() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const clearForm = () => {
+    setLoadedPatient(null);
+    form.reset();
   };
 
   return (
@@ -125,6 +156,8 @@ export default function PatientMaster() {
               <Input label="Fecha de nacimiento" type="date" name="fechaNacimiento" value={form.values.fechaNacimiento} onChange={form.handleChange} error={form.errors.fechaNacimiento} hint={age !== null ? `Edad calculada: ${age} años` : ""} />
               <Select label="Sexo" name="sexo" value={form.values.sexo} onChange={form.handleChange} error={form.errors.sexo} options={SEXOS} />
               <Select label="Estado civil" name="estadoCivil" value={form.values.estadoCivil} onChange={form.handleChange} error={form.errors.estadoCivil} options={ESTADOS_CIVILES} />
+              <Select label="Sede de registro" name="sede" value={form.values.sede} onChange={form.handleChange} error={form.errors.sede} options={HOSPITAL_BRANCHES} />
+              <PatientIdentifiers patient={loadedPatient} />
             </div>
           </div>
 
@@ -151,7 +184,7 @@ export default function PatientMaster() {
           </div>
 
           <div className="actions">
-            <Button variant="secondary" onClick={form.reset}>Limpiar</Button>
+            <Button variant="secondary" onClick={clearForm}>Limpiar</Button>
             <Button type="submit" loading={saving}>Guardar paciente</Button>
           </div>
         </form>

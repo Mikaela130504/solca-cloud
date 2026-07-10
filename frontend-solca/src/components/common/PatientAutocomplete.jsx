@@ -64,7 +64,7 @@ export default function PatientAutocomplete({ value = "", selectedPatient, onSel
               <span>{patient.nombres} {patient.apellidos}</span>
               <small>Nº paciente repositorio: {patient.idPacienteRegional}</small>
               {patient.historiasLocales?.length > 0 && (
-                <small>Historia clínica: {patient.historiasLocales.map((item) => item.identificadorHistoriaLocal).join(", ")}</small>
+                <small>Historia clínica: {patient.historiasLocales.map((item) => `${item.sede}: ${item.identificadorHistoriaLocal}`).join(", ")}</small>
               )}
             </button>
           ))}
