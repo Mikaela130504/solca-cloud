@@ -25,11 +25,17 @@ const initialValues = {
   paciente: "",
   motivoConsulta: "",
   enfermedadActual: "",
+  tieneAntecedenteMadre: false,
   antecedenteMadre: "",
+  tieneAntecedentePadre: false,
   antecedentePadre: "",
+  tieneAntecedenteHermanos: false,
   antecedenteHermanos: "",
+  tieneAntecedenteAbuelos: false,
   antecedenteAbuelos: "",
+  tieneAntecedenteHijos: false,
   antecedenteHijos: "",
+  tieneAntecedenteOtros: false,
   antecedenteOtros: "",
   diabetes: false,
   hipertension: false,
@@ -48,12 +54,6 @@ const initialValues = {
   medicamentosActuales: "",
   tieneAlergias: "No",
   alergias: "",
-  alcohol: false,
-  tabaco: false,
-  drogas: false,
-  actividadFisica: false,
-  habitosOtros: false,
-  habitosOtrosDetalle: "",
   peso: "",
   talla: "",
   imc: "",
@@ -97,6 +97,12 @@ const rules = {
   sede: [rule(required, "Seleccione la sede.")],
   fecha: [rule(required, "La fecha es obligatoria."), rule(isNotFutureDate, "La fecha debe ser válida.")],
   hora: [rule(required, "La hora es obligatoria.")],
+  antecedenteMadre: [rule((value, values) => !values.tieneAntecedenteMadre || required(value), "Ingrese el antecedente de madre.")],
+  antecedentePadre: [rule((value, values) => !values.tieneAntecedentePadre || required(value), "Ingrese el antecedente de padre.")],
+  antecedenteHermanos: [rule((value, values) => !values.tieneAntecedenteHermanos || required(value), "Ingrese el antecedente de hermanos.")],
+  antecedenteAbuelos: [rule((value, values) => !values.tieneAntecedenteAbuelos || required(value), "Ingrese el antecedente de abuelos.")],
+  antecedenteHijos: [rule((value, values) => !values.tieneAntecedenteHijos || required(value), "Ingrese el antecedente de hijos.")],
+  antecedenteOtros: [rule((value, values) => !values.tieneAntecedenteOtros || required(value), "Ingrese el antecedente familiar adicional.")],
   cirugiaFecha: [rule((value, values) => !values.cirugias || (required(value) && isNotFutureDate(value)), "Ingrese fecha de cirugía no futura.")],
   cirugiaProcedimiento: [rule((value, values) => !values.cirugias || required(value), "Ingrese el procedimiento quirúrgico.")],
   alergias: [rule((value, values) => values.tieneAlergias !== "Si" || required(value), "Describa las alergias.")],
@@ -111,16 +117,27 @@ function CheckField({ name, label, checked, onChange }) {
   );
 }
 
+function buildFamilyHistory(values) {
+  const selected = [
+    values.tieneAntecedenteMadre ? `Madre: ${values.antecedenteMadre}` : "",
+    values.tieneAntecedentePadre ? `Padre: ${values.antecedentePadre}` : "",
+    values.tieneAntecedenteHermanos ? `Hermanos: ${values.antecedenteHermanos}` : "",
+    values.tieneAntecedenteAbuelos ? `Abuelos: ${values.antecedenteAbuelos}` : "",
+    values.tieneAntecedenteHijos ? `Hijos: ${values.antecedenteHijos}` : "",
+    values.tieneAntecedenteOtros ? `Otros: ${values.antecedenteOtros}` : "",
+  ].filter(Boolean);
+  return selected.length ? selected.join("; ") : "Sin antecedentes familiares marcados";
+}
+
 function buildObservations(values) {
   return [
-    `Antecedentes familiares: Madre: ${values.antecedenteMadre || "N/A"}; Padre: ${values.antecedentePadre || "N/A"}; Hermanos: ${values.antecedenteHermanos || "N/A"}; Abuelos: ${values.antecedenteAbuelos || "N/A"}; Hijos: ${values.antecedenteHijos || "N/A"}; Otros: ${values.antecedenteOtros || "N/A"}.`,
+    `Antecedentes familiares: ${buildFamilyHistory(values)}.`,
     `Antecedentes personales: ${["diabetes", "hipertension", "asma", "cirugias", "cancer", "personalesOtros"].filter((key) => values[key]).join(", ") || "Sin antecedentes marcados"}.`,
     values.cirugias ? `Cirugía: ${values.cirugiaFecha} - ${values.cirugiaProcedimiento}.` : "",
     values.personalesOtros ? `Otros personales: ${values.personalesOtrosDetalle}.` : "",
     `Gineco-obstétricos: Cesáreas ${values.cesareas || 0}; Partos ${values.partos || 0}; Abortos ${values.abortos || 0}; Embarazos ${values.embarazos || 0}; Observaciones: ${values.ginecoObservaciones || "N/A"}.`,
     `Medicamentos actuales: ${values.medicamentosActuales || "N/A"}.`,
     `Alergias: ${values.tieneAlergias === "Si" ? values.alergias : "No refiere"}.`,
-    `Hábitos: ${["alcohol", "tabaco", "drogas", "actividadFisica", "habitosOtros"].filter((key) => values[key]).join(", ") || "Sin hábitos marcados"}. ${values.habitosOtros ? values.habitosOtrosDetalle : ""}`,
     `Examen físico: General: ${values.examenGeneral || "N/A"}; Cabeza/cuello: ${values.cabezaCuello || "N/A"}; Tórax: ${values.torax || "N/A"}; Abdomen: ${values.abdomen || "N/A"}; Extremidades: ${values.extremidades || "N/A"}; Neurológico: ${values.neurologico || "N/A"}.`,
     values.observaciones ? `Observaciones: ${values.observaciones}` : "",
   ].filter(Boolean).join("\n");
@@ -246,13 +263,21 @@ export default function ClinicalHistory() {
 
           <div className="form-section">
             <div className="form-section-title">Antecedentes familiares</div>
+            <div className="checkbox-grid">
+              <CheckField name="tieneAntecedenteMadre" label="Madre" checked={form.values.tieneAntecedenteMadre} onChange={form.handleChange} />
+              <CheckField name="tieneAntecedentePadre" label="Padre" checked={form.values.tieneAntecedentePadre} onChange={form.handleChange} />
+              <CheckField name="tieneAntecedenteHermanos" label="Hermanos" checked={form.values.tieneAntecedenteHermanos} onChange={form.handleChange} />
+              <CheckField name="tieneAntecedenteAbuelos" label="Abuelos" checked={form.values.tieneAntecedenteAbuelos} onChange={form.handleChange} />
+              <CheckField name="tieneAntecedenteHijos" label="Hijos" checked={form.values.tieneAntecedenteHijos} onChange={form.handleChange} />
+              <CheckField name="tieneAntecedenteOtros" label="Otros" checked={form.values.tieneAntecedenteOtros} onChange={form.handleChange} />
+            </div>
             <div className="grid grid-3">
-              <Input label="Madre" name="antecedenteMadre" value={form.values.antecedenteMadre} onChange={form.handleChange} />
-              <Input label="Padre" name="antecedentePadre" value={form.values.antecedentePadre} onChange={form.handleChange} />
-              <Input label="Hermanos" name="antecedenteHermanos" value={form.values.antecedenteHermanos} onChange={form.handleChange} />
-              <Input label="Abuelos" name="antecedenteAbuelos" value={form.values.antecedenteAbuelos} onChange={form.handleChange} />
-              <Input label="Hijos" name="antecedenteHijos" value={form.values.antecedenteHijos} onChange={form.handleChange} />
-              <Input label="Otros" name="antecedenteOtros" value={form.values.antecedenteOtros} onChange={form.handleChange} />
+              {form.values.tieneAntecedenteMadre && <Input label="Antecedente de madre" name="antecedenteMadre" value={form.values.antecedenteMadre} onChange={form.handleChange} error={form.errors.antecedenteMadre} />}
+              {form.values.tieneAntecedentePadre && <Input label="Antecedente de padre" name="antecedentePadre" value={form.values.antecedentePadre} onChange={form.handleChange} error={form.errors.antecedentePadre} />}
+              {form.values.tieneAntecedenteHermanos && <Input label="Antecedente de hermanos" name="antecedenteHermanos" value={form.values.antecedenteHermanos} onChange={form.handleChange} error={form.errors.antecedenteHermanos} />}
+              {form.values.tieneAntecedenteAbuelos && <Input label="Antecedente de abuelos" name="antecedenteAbuelos" value={form.values.antecedenteAbuelos} onChange={form.handleChange} error={form.errors.antecedenteAbuelos} />}
+              {form.values.tieneAntecedenteHijos && <Input label="Antecedente de hijos" name="antecedenteHijos" value={form.values.antecedenteHijos} onChange={form.handleChange} error={form.errors.antecedenteHijos} />}
+              {form.values.tieneAntecedenteOtros && <Input label="Otros antecedentes familiares" name="antecedenteOtros" value={form.values.antecedenteOtros} onChange={form.handleChange} error={form.errors.antecedenteOtros} />}
             </div>
           </div>
 
@@ -287,20 +312,12 @@ export default function ClinicalHistory() {
           </div>
 
           <div className="form-section">
-            <div className="form-section-title">Medicamentos, alergias y hábitos</div>
+            <div className="form-section-title">Medicamentos y alergias</div>
             <div className="grid grid-2">
               <Input label="Medicamentos actuales" type="textarea" name="medicamentosActuales" value={form.values.medicamentosActuales} onChange={form.handleChange} />
               <Select label="¿Tiene alergias?" name="tieneAlergias" value={form.values.tieneAlergias} onChange={form.handleChange} options={["Si", "No"]} />
               {form.values.tieneAlergias === "Si" && <Input label="Descripción de alergias" type="textarea" name="alergias" value={form.values.alergias} onChange={form.handleChange} error={form.errors.alergias} />}
             </div>
-            <div className="checkbox-grid">
-              <CheckField name="alcohol" label="Alcohol" checked={form.values.alcohol} onChange={form.handleChange} />
-              <CheckField name="tabaco" label="Tabaco" checked={form.values.tabaco} onChange={form.handleChange} />
-              <CheckField name="drogas" label="Drogas" checked={form.values.drogas} onChange={form.handleChange} />
-              <CheckField name="actividadFisica" label="Actividad física" checked={form.values.actividadFisica} onChange={form.handleChange} />
-              <CheckField name="habitosOtros" label="Otros" checked={form.values.habitosOtros} onChange={form.handleChange} />
-            </div>
-            {form.values.habitosOtros && <Input label="Detalle otros hábitos" name="habitosOtrosDetalle" value={form.values.habitosOtrosDetalle} onChange={form.handleChange} />}
           </div>
 
           <div className="form-section">
