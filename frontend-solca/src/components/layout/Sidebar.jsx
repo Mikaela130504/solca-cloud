@@ -16,7 +16,6 @@ const items = [
 
 export default function Sidebar() {
   const { user } = useAuth();
-  const visibleItems = items.filter((item) => canAccess(user, item.roles));
 
   return (
     <aside className="sidebar">
@@ -29,12 +28,24 @@ export default function Sidebar() {
       </div>
 
       <nav className="side-nav" aria-label="Navegacion principal">
-        {visibleItems.map((item) => (
-          <NavLink key={item.to} to={item.to} className={({ isActive }) => (isActive ? "active" : "")}>
-            <span className="nav-icon">{item.icon}</span>
-            <span>{item.label}</span>
-          </NavLink>
-        ))}
+        {items.map((item) => {
+          const allowed = canAccess(user, item.roles);
+          if (!allowed) {
+            return (
+              <span className="nav-disabled" key={item.to} title="Fuera de su rango: solo visualización">
+                <span className="nav-icon">{item.icon}</span>
+                <span>{item.label}</span>
+                <small>Fuera de su rango</small>
+              </span>
+            );
+          }
+          return (
+            <NavLink key={item.to} to={item.to} className={({ isActive }) => (isActive ? "active" : "")}>
+              <span className="nav-icon">{item.icon}</span>
+              <span>{item.label}</span>
+            </NavLink>
+          );
+        })}
       </nav>
     </aside>
   );

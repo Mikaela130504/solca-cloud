@@ -75,7 +75,8 @@ textarea {
   margin-top: var(--space-5);
 }
 
-.side-nav a {
+.side-nav a,
+.nav-disabled {
   display: flex;
   align-items: center;
   gap: var(--space-3);
@@ -91,6 +92,24 @@ textarea {
   background: rgba(255, 255, 255, 0.12);
   color: #fff;
   transform: translateX(2px);
+}
+
+.nav-disabled {
+  position: relative;
+  cursor: not-allowed;
+  color: rgba(255, 255, 255, 0.36);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.nav-disabled .nav-icon {
+  opacity: 0.5;
+}
+
+.nav-disabled small {
+  margin-left: auto;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.68rem;
+  font-weight: 800;
 }
 
 .nav-icon {
@@ -481,6 +500,34 @@ textarea {
 }
 
 .empty-state {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+.access-denied {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-6);
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-left: 5px solid var(--color-warning);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+
+.access-denied strong {
+  color: #9a3412;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+}
+
+.access-denied h1 {
+  margin: 0;
+  color: var(--color-ink);
+}
+
+.access-denied p {
+  max-width: 720px;
   margin: 0;
   color: var(--color-muted);
 }
