@@ -16,6 +16,9 @@ export async function createImagingStudy(study) {
     regionAnatomica: study.regionAnatomica,
     resultado: study.resultado,
     observaciones: study.observaciones,
+    estado: study.estado,
+    tecnicoResponsable: study.tecnicoResponsable,
+    hora: study.hora,
     archivo: study.archivo,
   };
   Object.entries(payload).forEach(([key, value]) => {
@@ -33,7 +36,40 @@ export async function listImagingStudies(idPacienteRegional) {
   return data;
 }
 
-export async function listAllImagingStudies() {
-  const { data } = await api.get("/imagenologia");
+export async function listAllImagingStudies(filters = {}) {
+  const { data } = await api.get("/imagenologia", { params: filters });
+  return data;
+}
+
+export async function updateImagingState(id, estado) {
+  const { data } = await api.put(`/imagenologia/${id}/estado/${estado}`);
+  return data;
+}
+
+export async function saveImagingResult(id, study) {
+  const formData = new FormData();
+  const payload = {
+    formato: study.formato,
+    resultado: study.resultado,
+    observaciones: study.observaciones,
+    tecnicoResponsable: study.tecnicoResponsable,
+    hora: study.hora,
+    archivo: study.archivo,
+  };
+  Object.entries(payload).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) formData.append(key, value);
+  });
+  const { data } = await api.put(`/imagenologia/${id}/resultado`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return data;
+}
+
+export function getImagingDownloadUrl(id) {
+  return `${API_CONFIG.imagingUrl}/imagenologia/${id}/archivo`;
+}
+
+export async function downloadImagingStudy(id) {
+  const { data } = await api.get(`/imagenologia/${id}/archivo`, { responseType: "blob" });
   return data;
 }

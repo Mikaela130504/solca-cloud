@@ -13,6 +13,13 @@ export async function createLaboratoryOrder(order) {
     tipoExamen: order.tipoExamen,
     resultado: order.resultado || order.resultados,
     observaciones: order.observaciones,
+    estado: order.estado,
+    prioridad: order.prioridad,
+    tecnologoResponsable: order.tecnologoResponsable,
+    valores: order.valores,
+    unidad: order.unidad,
+    valorReferencia: order.valorReferencia,
+    interpretacion: order.interpretacion,
   };
   const { data } = await api.post("/laboratorios", payload);
   return data;
@@ -24,7 +31,23 @@ export async function listLaboratoryResults(idPacienteRegional) {
   return data;
 }
 
-export async function listLaboratoryOrders() {
-  const { data } = await api.get("/laboratorios");
+export async function listLaboratoryOrders(filters = {}) {
+  const { data } = await api.get("/laboratorios", { params: filters });
+  return data;
+}
+
+export async function updateLaboratoryState(id, estado) {
+  const { data } = await api.put(`/laboratorios/${id}/estado/${estado}`);
+  return data;
+}
+
+export async function saveLaboratoryResult(id, result) {
+  const { data } = await api.put(`/laboratorios/${id}/resultado`, {
+    ...result,
+    cedula: result.cedula || "0000000000",
+    idPacienteRegional: result.idPacienteRegional,
+    fecha: result.fecha,
+    sede: result.sede,
+  });
   return data;
 }

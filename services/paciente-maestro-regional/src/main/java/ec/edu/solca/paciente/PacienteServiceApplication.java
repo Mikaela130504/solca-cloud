@@ -31,12 +31,12 @@ record HistoriaLocalDto(String sede, String identificadorHistoriaLocal) {}
 class PacienteController {
   private final PacienteService service;
   PacienteController(PacienteService service) { this.service = service; }
-  @GetMapping @PreAuthorize("hasAnyRole('ADMIN','MEDICO','LABORATORIO')") List<PacienteDto> listar(@RequestParam(defaultValue="") String q) { return service.listar(q); }
+  @GetMapping @PreAuthorize("hasAnyRole('ADMIN','MEDICO','LABORATORIO','IMAGENOLOGIA','REPOSITORIO')") List<PacienteDto> listar(@RequestParam(defaultValue="") String q) { return service.listar(q); }
   @PostMapping @ResponseStatus(HttpStatus.CREATED) @PreAuthorize("hasAnyRole('ADMIN','MEDICO')") PacienteDto crear(@Valid @RequestBody PacienteRequest request, HttpServletRequest http) { return service.crear(request, http); }
   @PutMapping("/{id}") @PreAuthorize("hasAnyRole('ADMIN','MEDICO')") PacienteDto editar(@PathVariable("id") String id, @Valid @RequestBody PacienteRequest request, HttpServletRequest http) { return service.editar(id, request, http); }
   @DeleteMapping("/{id}") @ResponseStatus(HttpStatus.NO_CONTENT) @PreAuthorize("hasRole('ADMIN')") void eliminar(@PathVariable("id") String id, HttpServletRequest http) { service.eliminar(id, http); }
-  @GetMapping("/cedula/{cedula}") PacienteDto porCedula(@PathVariable("cedula") String cedula) { return service.porCedula(cedula); }
-  @GetMapping("/{id}") PacienteDto porId(@PathVariable("id") String id) { return service.porId(id); }
+  @GetMapping("/cedula/{cedula}") @PreAuthorize("hasAnyRole('ADMIN','MEDICO','LABORATORIO','IMAGENOLOGIA','REPOSITORIO')") PacienteDto porCedula(@PathVariable("cedula") String cedula) { return service.porCedula(cedula); }
+  @GetMapping("/{id}") @PreAuthorize("hasAnyRole('ADMIN','MEDICO','LABORATORIO','IMAGENOLOGIA','REPOSITORIO')") PacienteDto porId(@PathVariable("id") String id) { return service.porId(id); }
   @PostMapping("/{id}/historias-locales") @PreAuthorize("hasAnyRole('ADMIN','MEDICO')") void asociar(@PathVariable("id") String id, @Valid @RequestBody HistoriaLocalRequest request, HttpServletRequest http) { service.asociar(id, request, http); }
 }
 

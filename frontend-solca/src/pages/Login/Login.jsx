@@ -57,6 +57,7 @@ export default function Login() {
             <span>HCE</span>
             <span>Laboratorio</span>
             <span>Imagenología</span>
+            <span>Repositorio</span>
           </div>
         </div>
 
