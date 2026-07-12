@@ -11,7 +11,7 @@ import Toast from "../../components/common/Toast.jsx";
 import useAuth from "../../hooks/useAuth.js";
 import useForm from "../../hooks/useForm.js";
 import { getApiErrorMessage } from "../../services/api.js";
-import { createImagingStudy, downloadImagingStudy, listAllImagingStudies, saveImagingResult, updateImagingState } from "../../services/imagingService.js";
+import { createImagingStudy, downloadImagingStudy, listAllImagingStudies, saveImagingResult } from "../../services/imagingService.js";
 import { FORMATOS_IMAGEN, HOSPITAL_BRANCHES, REGIONES_ANATOMICAS, TIPOS_ESTUDIO } from "../../utils/constants.js";
 import { toLocalDateInputValue } from "../../utils/helpers.js";
 import { ROLES } from "../../utils/roles.js";
@@ -150,10 +150,6 @@ export default function Imaging() {
       hora: study.hora || new Date().toTimeString().slice(0, 5),
       archivo: null,
     });
-    if (canProcess && study.estado === "SOLICITADO") {
-      await updateImagingState(study.id, "REALIZADO");
-      await loadStudies();
-    }
   };
 
   const handleFile = (event) => {
@@ -269,11 +265,17 @@ export default function Imaging() {
       </Card>
 
       {activeStudy && (
-        <Card title={`Detalle PACS #${activeStudy.id}`}>
+        <Card title="Estudio de Imagenología">
           <div className="grid grid-3 form-section">
             <div className="readonly-box"><strong>Paciente</strong><br />{activeStudy.idPacienteRegional || activeStudy.cedula}</div>
-            <div className="readonly-box"><strong>Estudio</strong><br />{activeStudy.tipoEstudio}</div>
+            <div className="readonly-box"><strong>Médico solicitante</strong><br />{activeStudy.medico || "No registrado"}</div>
+            <div className="readonly-box"><strong>Tipo de estudio</strong><br />{activeStudy.tipoEstudio}</div>
+            <div className="readonly-box"><strong>Región anatómica</strong><br />{activeStudy.regionAnatomica || "No registrada"}</div>
+            <div className="readonly-box"><strong>Fecha</strong><br />{activeStudy.fecha}</div>
+            <div className="readonly-box"><strong>Hora</strong><br />{activeStudy.hora || "Pendiente"}</div>
+            <div className="readonly-box"><strong>Sede</strong><br />{activeStudy.sede}</div>
             <div className="readonly-box"><strong>Estado</strong><br /><StatusBadge status={activeStudy.estado} /></div>
+            <div className="readonly-box"><strong>Solicitud médica</strong><br />{activeStudy.observaciones || "Sin observaciones"}</div>
           </div>
           <form onSubmit={saveResult}>
             <div className="grid grid-3 form-section">

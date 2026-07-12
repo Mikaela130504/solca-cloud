@@ -3,17 +3,17 @@ export const ROLES = {
   medico: "MEDICO",
   laboratorio: "LABORATORIO",
   imagenologia: "IMAGENOLOGIA",
-  repositorio: "REPOSITORIO",
 };
 
 export const ROLE_PERMISSIONS = {
-  dashboard: [ROLES.admin, ROLES.medico, ROLES.laboratorio, ROLES.imagenologia, ROLES.repositorio],
+  dashboard: [ROLES.admin, ROLES.medico, ROLES.laboratorio, ROLES.imagenologia],
   patient: [ROLES.admin, ROLES.medico],
   clinicalHistory: [ROLES.admin, ROLES.medico],
   consultation: [ROLES.admin, ROLES.medico],
   laboratory: [ROLES.admin, ROLES.medico, ROLES.laboratorio],
   imaging: [ROLES.admin, ROLES.medico, ROLES.imagenologia],
-  repository: [ROLES.admin, ROLES.medico, ROLES.laboratorio, ROLES.imagenologia, ROLES.repositorio],
+  repository: [ROLES.admin, ROLES.medico],
+  systemStatus: [ROLES.admin],
   audit: [ROLES.admin],
 };
 

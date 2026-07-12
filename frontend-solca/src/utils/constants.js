@@ -7,6 +7,7 @@ export const ROUTES = {
   laboratory: "/laboratorio/nuevo",
   imaging: "/imagenologia/nuevo",
   repository: "/repositorio-clinico",
+  systemStatus: "/estado-microservicios",
 };
 
 export const HOSPITAL_BRANCHES = [
@@ -41,6 +42,8 @@ export const TIPOS_LABORATORIO = [
   "Marcadores tumorales",
   "Química sanguínea",
   "Coagulación",
+  "Glucosa",
+  "Creatinina",
 ];
 
 export const PRIORIDADES = ["Normal", "Preferente", "Urgente"];

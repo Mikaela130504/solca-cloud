@@ -7,6 +7,7 @@ import Consultation from "../pages/ClinicalHistory/Consultation.jsx";
 import Laboratory from "../pages/Laboratory/Laboratory.jsx";
 import Imaging from "../pages/Imaging/Imaging.jsx";
 import Repository from "../pages/Repository/Repository.jsx";
+import SystemStatus from "../pages/SystemStatus/SystemStatus.jsx";
 import NotFound from "../pages/NotFound/NotFound.jsx";
 import MainLayout from "../layouts/MainLayout.jsx";
 import RutaProtegida from "./RutaProtegida.jsx";
@@ -22,23 +23,26 @@ export default function AppRoutes() {
           <Route element={<RutaProtegida roles={ROLE_PERMISSIONS.dashboard} />}>
             <Route path={ROUTES.dashboard} element={<Dashboard />} />
           </Route>
-          <Route element={<RutaProtegida roles={ROLE_PERMISSIONS.patient} />}>
+          <Route element={<RutaProtegida roles={ROLE_PERMISSIONS.patient} serviceKey="patient" />}>
             <Route path={ROUTES.patient} element={<PatientMaster />} />
           </Route>
-          <Route element={<RutaProtegida roles={ROLE_PERMISSIONS.clinicalHistory} />}>
+          <Route element={<RutaProtegida roles={ROLE_PERMISSIONS.clinicalHistory} serviceKey="consultation" />}>
             <Route path={ROUTES.clinicalHistory} element={<ClinicalHistory />} />
           </Route>
-          <Route element={<RutaProtegida roles={ROLE_PERMISSIONS.consultation} />}>
+          <Route element={<RutaProtegida roles={ROLE_PERMISSIONS.consultation} serviceKey="consultation" />}>
             <Route path={ROUTES.consultation} element={<Consultation />} />
           </Route>
-          <Route element={<RutaProtegida roles={ROLE_PERMISSIONS.laboratory} />}>
+          <Route element={<RutaProtegida roles={ROLE_PERMISSIONS.laboratory} serviceKey="laboratory" />}>
             <Route path={ROUTES.laboratory} element={<Laboratory />} />
           </Route>
-          <Route element={<RutaProtegida roles={ROLE_PERMISSIONS.imaging} />}>
+          <Route element={<RutaProtegida roles={ROLE_PERMISSIONS.imaging} serviceKey="imaging" />}>
             <Route path={ROUTES.imaging} element={<Imaging />} />
           </Route>
-          <Route element={<RutaProtegida roles={ROLE_PERMISSIONS.repository} />}>
+          <Route element={<RutaProtegida roles={ROLE_PERMISSIONS.repository} serviceKey="repository" />}>
             <Route path={ROUTES.repository} element={<Repository />} />
+          </Route>
+          <Route element={<RutaProtegida roles={ROLE_PERMISSIONS.systemStatus} />}>
+            <Route path={ROUTES.systemStatus} element={<SystemStatus />} />
           </Route>
         </Route>
       </Route>

@@ -33,10 +33,10 @@ record RegistroRequest(@NotBlank String cedula, String idPacienteRegional, @NotN
 class RegistroController {
   private final RegistroService service;
   RegistroController(RegistroService service) { this.service = service; }
-  @GetMapping @PreAuthorize("hasAnyRole('ADMIN','MEDICO','IMAGENOLOGIA','REPOSITORIO')") List<RegistroDto> listar(@RequestParam(defaultValue="") String estado, @RequestParam(defaultValue="") String sede, @RequestParam(defaultValue="") String paciente) { return service.listar(estado, sede, paciente); }
-  @GetMapping("/{id}") @PreAuthorize("hasAnyRole('ADMIN','MEDICO','IMAGENOLOGIA','REPOSITORIO')") RegistroDto obtener(@PathVariable("id") Long id) { return service.obtener(id); }
-  @GetMapping("/{id}/archivo") @PreAuthorize("hasAnyRole('ADMIN','MEDICO','IMAGENOLOGIA','REPOSITORIO')") ResponseEntity<byte[]> descargar(@PathVariable("id") Long id) throws Exception { return service.descargar(id); }
-  @GetMapping("/paciente/{idPacienteRegional}") @PreAuthorize("hasAnyRole('ADMIN','MEDICO','IMAGENOLOGIA','REPOSITORIO')") List<RegistroDto> porPaciente(@PathVariable("idPacienteRegional") String idPacienteRegional) { return service.porPaciente(idPacienteRegional); }
+  @GetMapping @PreAuthorize("hasAnyRole('ADMIN','MEDICO','IMAGENOLOGIA')") List<RegistroDto> listar(@RequestParam(defaultValue="") String estado, @RequestParam(defaultValue="") String sede, @RequestParam(defaultValue="") String paciente) { return service.listar(estado, sede, paciente); }
+  @GetMapping("/{id}") @PreAuthorize("hasAnyRole('ADMIN','MEDICO','IMAGENOLOGIA')") RegistroDto obtener(@PathVariable("id") Long id) { return service.obtener(id); }
+  @GetMapping("/{id}/archivo") @PreAuthorize("hasAnyRole('ADMIN','MEDICO','IMAGENOLOGIA')") ResponseEntity<byte[]> descargar(@PathVariable("id") Long id) throws Exception { return service.descargar(id); }
+  @GetMapping("/paciente/{idPacienteRegional}") @PreAuthorize("hasAnyRole('ADMIN','MEDICO','IMAGENOLOGIA')") List<RegistroDto> porPaciente(@PathVariable("idPacienteRegional") String idPacienteRegional) { return service.porPaciente(idPacienteRegional); }
   @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE) @ResponseStatus(HttpStatus.CREATED) @PreAuthorize("hasAnyRole('ADMIN','MEDICO')") RegistroDto crear(@Valid @RequestBody RegistroRequest request, HttpServletRequest http) { return service.crear(request, http); }
   @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE) @ResponseStatus(HttpStatus.CREATED) @PreAuthorize("hasAnyRole('ADMIN','MEDICO','IMAGENOLOGIA')") RegistroDto crearConArchivo(
     @RequestParam String cedula,

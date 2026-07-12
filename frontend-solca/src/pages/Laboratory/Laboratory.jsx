@@ -15,10 +15,11 @@ import { getApiErrorMessage } from "../../services/api.js";
 import { createLaboratoryOrder, listLaboratoryOrders, saveLaboratoryResult, updateLaboratoryState } from "../../services/laboratoryService.js";
 import { HOSPITAL_BRANCHES, PRIORIDADES, TIPOS_LABORATORIO } from "../../utils/constants.js";
 import { toLocalDateInputValue } from "../../utils/helpers.js";
+import { calculateIndicator, getParametersForExam } from "../../utils/laboratoryCatalog.js";
 import { ROLES } from "../../utils/roles.js";
 import { isNotFutureDate, required, rule } from "../../utils/validators.js";
 
-const ESTADOS_LAB = ["PENDIENTE", "EN_PROCESO", "FINALIZADO"];
+const ESTADOS_LAB = ["PENDIENTE", "EN_PROCESO", "FINALIZADO", "VALIDADO"];
 
 const initialValues = {
   idPacienteRegional: "",
@@ -35,11 +36,12 @@ const initialValues = {
 };
 
 const resultInitial = {
+  codigoMuestra: "",
+  tipoResultado: "Numérico",
   resultado: "",
-  valores: "",
-  unidad: "",
-  valorReferencia: "",
+  parameters: [],
   interpretacion: "NORMAL",
+  resultadoCritico: false,
   tecnologoResponsable: "",
   observaciones: "",
 };
@@ -55,6 +57,16 @@ const rules = {
 
 function StatusBadge({ status }) {
   return <span className={`status-badge status-${(status || "PENDIENTE").toLowerCase()}`}>{status || "PENDIENTE"}</span>;
+}
+
+function parseStoredParameters(value, exam) {
+  try {
+    const parsed = JSON.parse(value || "[]");
+    if (Array.isArray(parsed) && parsed.length) return parsed;
+  } catch {
+    // El registro anterior pudo guardar texto libre.
+  }
+  return getParametersForExam(exam).map((parameter) => ({ ...parameter, value: "", indicator: "" }));
 }
 
 export default function Laboratory() {
@@ -157,12 +169,14 @@ export default function Laboratory() {
 
   const selectOrder = async (order) => {
     setActiveOrder(order);
+    const parameters = parseStoredParameters(order.valores, order.tipoExamen);
     setResult({
+      codigoMuestra: order.codigoMuestra || `MUE-${String(order.id).padStart(6, "0")}`,
+      tipoResultado: order.tipoResultado || "Numérico",
       resultado: order.resultado || "",
-      valores: order.valores || "",
-      unidad: order.unidad || "",
-      valorReferencia: order.valorReferencia || "",
-      interpretacion: order.interpretacion || "NORMAL",
+      parameters,
+      interpretacion: order.interpretacion || (parameters.some((item) => item.indicator && item.indicator !== "NORMAL") ? "ANORMAL" : "NORMAL"),
+      resultadoCritico: Boolean(order.resultadoCritico),
       tecnologoResponsable: order.tecnologoResponsable || user?.name || user?.username || "",
       observaciones: order.observaciones || "",
     });
@@ -179,6 +193,8 @@ export default function Laboratory() {
     try {
       await saveLaboratoryResult(activeOrder.id, {
         ...result,
+        valores: JSON.stringify(result.parameters),
+        resultado: result.resultado || result.parameters.map((item) => `${item.name}: ${item.value || "Sin valor"} ${item.unit} (${item.indicator || "Sin indicador"})`).join("; "),
         cedula: activeOrder.cedula,
         idPacienteRegional: activeOrder.idPacienteRegional,
         fecha: activeOrder.fecha,
@@ -193,6 +209,21 @@ export default function Laboratory() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const updateParameter = (index, value) => {
+    setResult((current) => {
+      const parameters = current.parameters.map((item, itemIndex) => (
+        itemIndex === index ? { ...item, value, indicator: calculateIndicator(value, item) } : item
+      ));
+      const hasCritical = parameters.some((item) => item.indicator === "BAJO" || item.indicator === "ALTO");
+      return {
+        ...current,
+        parameters,
+        interpretacion: hasCritical ? "ANORMAL" : "NORMAL",
+        resultadoCritico: parameters.some((item) => item.indicator === "ALTO" || item.indicator === "BAJO") && current.resultadoCritico,
+      };
+    });
   };
 
   return (
@@ -268,25 +299,59 @@ export default function Laboratory() {
       </Card>
 
       {activeOrder && (
-        <Card title={`Detalle de laboratorio #${activeOrder.id}`}>
+        <Card title="Resultado de Laboratorio">
           <div className="grid grid-3 form-section">
             <div className="readonly-box"><strong>Paciente</strong><br />{activeOrder.idPacienteRegional || activeOrder.cedula}</div>
-            <div className="readonly-box"><strong>Examen</strong><br />{activeOrder.tipoExamen}</div>
+            <div className="readonly-box"><strong>Médico solicitante</strong><br />{activeOrder.medico || "No registrado"}</div>
+            <div className="readonly-box"><strong>Especialidad</strong><br />{activeOrder.especialidad || "No registrada"}</div>
+            <div className="readonly-box"><strong>Examen solicitado</strong><br />{activeOrder.tipoExamen}</div>
+            <div className="readonly-box"><strong>Prioridad</strong><br />{activeOrder.prioridad || "NORMAL"}</div>
+            <div className="readonly-box"><strong>Sede</strong><br />{activeOrder.sede}</div>
+            <div className="readonly-box"><strong>Fecha solicitud</strong><br />{activeOrder.fechaSolicitud ? String(activeOrder.fechaSolicitud).replace("T", " ").slice(0, 16) : activeOrder.fecha}</div>
+            <div className="readonly-box"><strong>Observaciones médicas</strong><br />{activeOrder.observaciones || "Sin observaciones"}</div>
             <div className="readonly-box"><strong>Estado</strong><br /><StatusBadge status={activeOrder.estado} /></div>
           </div>
           <form onSubmit={saveResult}>
             <div className="grid grid-3 form-section">
-              <Input label="Tecnólogo responsable" name="tecnologoResponsable" value={result.tecnologoResponsable} onChange={(event) => setResult((current) => ({ ...current, tecnologoResponsable: event.target.value }))} readOnly={!canProcess || activeOrder.estado === "FINALIZADO"} />
-              <Input label="Valor obtenido" name="valores" value={result.valores} onChange={(event) => setResult((current) => ({ ...current, valores: event.target.value }))} readOnly={!canProcess || activeOrder.estado === "FINALIZADO"} />
-              <Input label="Unidad" name="unidad" value={result.unidad} onChange={(event) => setResult((current) => ({ ...current, unidad: event.target.value }))} readOnly={!canProcess || activeOrder.estado === "FINALIZADO"} />
-              <Input label="Valor de referencia" name="valorReferencia" value={result.valorReferencia} onChange={(event) => setResult((current) => ({ ...current, valorReferencia: event.target.value }))} readOnly={!canProcess || activeOrder.estado === "FINALIZADO"} />
-              <Select label="Interpretación" name="interpretacion" value={result.interpretacion} onChange={(event) => setResult((current) => ({ ...current, interpretacion: event.target.value }))} options={["NORMAL", "ANORMAL", "CRITICO"]} />
-              <Input label="Resultado" type="textarea" name="resultado" value={result.resultado} onChange={(event) => setResult((current) => ({ ...current, resultado: event.target.value }))} readOnly={!canProcess || activeOrder.estado === "FINALIZADO"} />
+              <Input label="Código único de muestra" name="codigoMuestra" value={result.codigoMuestra} onChange={(event) => setResult((current) => ({ ...current, codigoMuestra: event.target.value }))} readOnly={!canProcess || activeOrder.estado === "VALIDADO"} />
+              <Select label="Tipo de resultado" name="tipoResultado" value={result.tipoResultado} onChange={(event) => setResult((current) => ({ ...current, tipoResultado: event.target.value }))} options={["Numérico", "Cualitativo", "Texto"]} disabled={!canProcess || activeOrder.estado === "VALIDADO"} />
+              <Input label="Tecnólogo responsable" name="tecnologoResponsable" value={result.tecnologoResponsable} onChange={(event) => setResult((current) => ({ ...current, tecnologoResponsable: event.target.value }))} readOnly={!canProcess || activeOrder.estado === "VALIDADO"} />
             </div>
-            <Input label="Observaciones" type="textarea" name="observaciones" value={result.observaciones} onChange={(event) => setResult((current) => ({ ...current, observaciones: event.target.value }))} readOnly={!canProcess || activeOrder.estado === "FINALIZADO"} />
+            <div className="table-wrap form-section">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Parámetro</th>
+                    <th>Valor obtenido</th>
+                    <th>Unidad</th>
+                    <th>Valor referencia</th>
+                    <th>Indicador</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {result.parameters.map((parameter, index) => (
+                    <tr key={parameter.name}>
+                      <td>{parameter.name}</td>
+                      <td>
+                        <input className="table-input" value={parameter.value || ""} onChange={(event) => updateParameter(index, event.target.value)} disabled={!canProcess || activeOrder.estado === "VALIDADO"} />
+                      </td>
+                      <td>{parameter.unit}</td>
+                      <td>{parameter.min}-{parameter.max}</td>
+                      <td><span className={`status-badge ${parameter.indicator === "NORMAL" ? "status-finalizado" : parameter.indicator ? "status-pendiente" : ""}`}>{parameter.indicator || "Pendiente"}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="grid grid-3 form-section">
+              <Select label="Resultado crítico" name="resultadoCritico" value={result.resultadoCritico ? "Sí" : "No"} onChange={(event) => setResult((current) => ({ ...current, resultadoCritico: event.target.value === "Sí" }))} options={["No", "Sí"]} disabled={!canProcess || activeOrder.estado === "VALIDADO"} />
+              <Input label="Interpretación del laboratorista" name="interpretacion" value={result.interpretacion} onChange={(event) => setResult((current) => ({ ...current, interpretacion: event.target.value }))} readOnly={!canProcess || activeOrder.estado === "VALIDADO"} />
+              <Input label="Resultado textual adicional" type="textarea" name="resultado" value={result.resultado} onChange={(event) => setResult((current) => ({ ...current, resultado: event.target.value }))} readOnly={!canProcess || activeOrder.estado === "VALIDADO"} />
+            </div>
+            <Input label="Observaciones" type="textarea" name="observaciones" value={result.observaciones} onChange={(event) => setResult((current) => ({ ...current, observaciones: event.target.value }))} readOnly={!canProcess || activeOrder.estado === "VALIDADO"} />
             <div className="actions">
               <Button type="button" variant="ghost" onClick={() => setActiveOrder(null)}>Cerrar</Button>
-              {canProcess && activeOrder.estado !== "FINALIZADO" && <Button type="submit" loading={saving}>Validar resultado</Button>}
+              {canProcess && activeOrder.estado !== "VALIDADO" && <Button type="submit" loading={saving}>Validar resultado</Button>}
             </div>
           </form>
         </Card>

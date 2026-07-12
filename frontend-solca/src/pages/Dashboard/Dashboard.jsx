@@ -18,6 +18,7 @@ const quickLinks = [
   { to: ROUTES.laboratory, title: "Laboratorio", text: "Solicitud y registro de resultados de laboratorio.", roles: ROLE_PERMISSIONS.laboratory },
   { to: ROUTES.imaging, title: "Imagenología", text: "Solicitud y registro de estudios diagnósticos.", roles: ROLE_PERMISSIONS.imaging },
   { to: ROUTES.repository, title: "Consultar repositorio", text: "Vista longitudinal por paciente y evento clínico.", roles: ROLE_PERMISSIONS.repository },
+  { to: ROUTES.systemStatus, title: "Estado de microservicios", text: "Disponibilidad y tiempos de respuesta en Contabo.", roles: ROLE_PERMISSIONS.systemStatus },
 ];
 
 const criticalTerms = ["urgente", "emergencia", "crítico", "critico", "metástasis", "metastasis", "cáncer", "cancer", "dolor intenso"];
@@ -126,13 +127,6 @@ export default function Dashboard() {
           </Card>
         ))}
       </section>
-
-      {metrics.unavailable.length ? (
-        <section className="dashboard-alert">
-          <strong>Servicios no disponibles:</strong>
-          <span>{metrics.unavailable.join(", ")}</span>
-        </section>
-      ) : null}
 
       <section className="grid grid-2 dashboard-section">
         <Card title="Accesos rápidos" subtitle="Flujos frecuentes del personal asistencial">

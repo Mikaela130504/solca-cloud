@@ -36,7 +36,6 @@ export default function Repository() {
   const consultations = Array.isArray(data?.consultations || data?.consultas) ? data.consultations || data.consultas : [];
   const laboratories = Array.isArray(data?.laboratories || data?.laboratorios || data?.laboratorio) ? data.laboratories || data.laboratorios || data.laboratorio : [];
   const imaging = Array.isArray(data?.imaging || data?.imagenologia || data?.imagenes) ? data.imaging || data.imagenologia || data.imagenes : [];
-  const unavailable = data?.serviciosNoDisponibles || [];
 
   if (loading) {
     return <Loader />;
@@ -60,12 +59,6 @@ export default function Repository() {
 
       {data && (
         <>
-          {unavailable.length > 0 && (
-            <div className="repository-alert">
-              Servicios no disponibles: {unavailable.join(", ")}
-            </div>
-          )}
-
           <div className="grid grid-2 repository-main">
             <PatientSummary patient={patient} />
             <ClinicalHistoryView history={data.history || data.historiaClinica} historiasLocales={patient?.historiasLocales || []} />

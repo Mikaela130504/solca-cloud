@@ -20,6 +20,9 @@ export async function createLaboratoryOrder(order) {
     unidad: order.unidad,
     valorReferencia: order.valorReferencia,
     interpretacion: order.interpretacion,
+    codigoMuestra: order.codigoMuestra,
+    tipoResultado: order.tipoResultado,
+    resultadoCritico: order.resultadoCritico,
   };
   const { data } = await api.post("/laboratorios", payload);
   return data;
@@ -48,6 +51,11 @@ export async function saveLaboratoryResult(id, result) {
     idPacienteRegional: result.idPacienteRegional,
     fecha: result.fecha,
     sede: result.sede,
+    codigoMuestra: result.codigoMuestra,
+    tipoResultado: result.tipoResultado,
+    resultadoCritico: result.resultadoCritico,
+    valores: result.valores,
+    interpretacion: result.interpretacion,
   });
   return data;
 }

@@ -29,7 +29,6 @@ public class AuthServiceApplication {
       repo.save("medico", encoder.encode("medico123"), "MEDICO", "Dr. Carlos Salazar");
       repo.save("laboratorio", encoder.encode("lab123"), "LABORATORIO", "Laboratorio SOLCA");
       repo.save("imagenologia", encoder.encode("img123"), "IMAGENOLOGIA", "Imagenologia SOLCA");
-      repo.save("repositorio", encoder.encode("repo123"), "REPOSITORIO", "Repositorio Clinico SOLCA");
     };
   }
 }

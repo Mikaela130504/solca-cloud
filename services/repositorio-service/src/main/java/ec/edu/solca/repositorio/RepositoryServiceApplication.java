@@ -27,11 +27,11 @@ public class RepositoryServiceApplication {
 class RepositorioController {
   private final RepositorioService service;
   RepositorioController(RepositorioService service) { this.service = service; }
-  @GetMapping @PreAuthorize("hasAnyRole('ADMIN','MEDICO','LABORATORIO','IMAGENOLOGIA','REPOSITORIO')") Map<String,Object> vacio() { return Map.of("mensaje", "Ingrese un identificador regional o cédula para consultar el repositorio clínico."); }
-  @GetMapping("/{paciente}") @PreAuthorize("hasAnyRole('ADMIN','MEDICO','LABORATORIO','IMAGENOLOGIA','REPOSITORIO')") Map<String,Object> consultar(@PathVariable("paciente") String paciente, @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization, HttpServletRequest http) { return service.consultar(paciente, authorization, http); }
+  @GetMapping @PreAuthorize("hasAnyRole('ADMIN','MEDICO')") Map<String,Object> vacio() { return Map.of("mensaje", "Ingrese un identificador regional o cédula para consultar el repositorio clínico."); }
+  @GetMapping("/{paciente}") @PreAuthorize("hasAnyRole('ADMIN','MEDICO')") Map<String,Object> consultar(@PathVariable("paciente") String paciente, @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization, HttpServletRequest http) { return service.consultar(paciente, authorization, http); }
   @GetMapping("/auditorias") @PreAuthorize("hasRole('ADMIN')") List<Map<String,Object>> auditorias() { return service.auditorias(); }
-  @GetMapping("/estado-servicios") @PreAuthorize("hasAnyRole('ADMIN','REPOSITORIO')") List<Map<String,Object>> estadoServicios() { return service.estadoServicios(); }
-  @GetMapping("/logs-integracion") @PreAuthorize("hasAnyRole('ADMIN','REPOSITORIO')") List<Map<String,Object>> logsIntegracion() { return service.logsIntegracion(); }
+  @GetMapping("/estado-servicios") @PreAuthorize("hasRole('ADMIN')") List<Map<String,Object>> estadoServicios() { return service.estadoServicios(); }
+  @GetMapping("/logs-integracion") @PreAuthorize("hasRole('ADMIN')") List<Map<String,Object>> logsIntegracion() { return service.logsIntegracion(); }
 }
 
 @RestController
@@ -39,7 +39,7 @@ class RepositorioController {
 class RepositorioAvanceController {
   private final RepositorioService service;
   RepositorioAvanceController(RepositorioService service) { this.service = service; }
-  @GetMapping("/paciente/{idPacienteRegional}") @PreAuthorize("hasAnyRole('ADMIN','MEDICO','LABORATORIO','IMAGENOLOGIA','REPOSITORIO')") Map<String,Object> consultarPaciente(@PathVariable("idPacienteRegional") String idPacienteRegional, @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization, HttpServletRequest http) { return service.consultarAvance(idPacienteRegional, authorization, http); }
+  @GetMapping("/paciente/{idPacienteRegional}") @PreAuthorize("hasAnyRole('ADMIN','MEDICO')") Map<String,Object> consultarPaciente(@PathVariable("idPacienteRegional") String idPacienteRegional, @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization, HttpServletRequest http) { return service.consultarAvance(idPacienteRegional, authorization, http); }
 }
 
 @org.springframework.stereotype.Service

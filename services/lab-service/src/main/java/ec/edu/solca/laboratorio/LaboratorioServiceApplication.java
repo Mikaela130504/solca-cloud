@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.*;
 
 @SpringBootApplication(scanBasePackages = "ec.edu.solca")
@@ -22,17 +23,17 @@ public class LaboratorioServiceApplication {
   @Bean CommandLineRunner schema(RegistroRepository repo) { return args -> repo.schema(); }
 }
 
-record RegistroDto(Long id, String idPacienteRegional, String cedula, LocalDate fecha, String sede, String medico, String especialidad, String tipoConsulta, String diagnostico, String tratamiento, String motivo, String evolucion, String tipoExamen, String resultado, String observaciones, String tipoEstudio, String formato, String url, String regionAnatomica, String estado, String prioridad, String tecnologoResponsable, LocalDateTime fechaSolicitud, LocalDateTime fechaResultado, String valores, String unidad, String valorReferencia, String interpretacion) {}
-record RegistroRequest(@NotBlank String cedula, String idPacienteRegional, @NotNull LocalDate fecha, @NotBlank String sede, String medico, String especialidad, String tipoConsulta, String diagnostico, String tratamiento, String motivo, String evolucion, String tipoExamen, String resultado, String observaciones, String tipoEstudio, String formato, String url, String regionAnatomica, String estado, String prioridad, String tecnologoResponsable, String valores, String unidad, String valorReferencia, String interpretacion) {}
+record RegistroDto(Long id, String idPacienteRegional, String cedula, LocalDate fecha, String sede, String medico, String especialidad, String tipoConsulta, String diagnostico, String tratamiento, String motivo, String evolucion, String tipoExamen, String resultado, String observaciones, String tipoEstudio, String formato, String url, String regionAnatomica, String estado, String prioridad, String tecnologoResponsable, LocalDateTime fechaSolicitud, LocalDateTime fechaResultado, String valores, String unidad, String valorReferencia, String interpretacion, String codigoMuestra, String tipoResultado, Boolean resultadoCritico, LocalTime horaResultado, LocalDateTime fechaValidacion, String usuarioValido) {}
+record RegistroRequest(@NotBlank String cedula, String idPacienteRegional, @NotNull LocalDate fecha, @NotBlank String sede, String medico, String especialidad, String tipoConsulta, String diagnostico, String tratamiento, String motivo, String evolucion, String tipoExamen, String resultado, String observaciones, String tipoEstudio, String formato, String url, String regionAnatomica, String estado, String prioridad, String tecnologoResponsable, String valores, String unidad, String valorReferencia, String interpretacion, String codigoMuestra, String tipoResultado, Boolean resultadoCritico) {}
 
 @RestController
 @RequestMapping("/laboratorios")
 class RegistroController {
   private final RegistroService service;
   RegistroController(RegistroService service) { this.service = service; }
-  @GetMapping @PreAuthorize("hasAnyRole('ADMIN','MEDICO','LABORATORIO','REPOSITORIO')") List<RegistroDto> listar(@RequestParam(defaultValue="") String estado, @RequestParam(defaultValue="") String sede, @RequestParam(defaultValue="") String paciente) { return service.listar(estado, sede, paciente); }
-  @GetMapping("/{id}") @PreAuthorize("hasAnyRole('ADMIN','MEDICO','LABORATORIO','REPOSITORIO')") RegistroDto obtener(@PathVariable("id") Long id) { return service.obtener(id); }
-  @GetMapping("/paciente/{idPacienteRegional}") @PreAuthorize("hasAnyRole('ADMIN','MEDICO','LABORATORIO','REPOSITORIO')") List<RegistroDto> porPaciente(@PathVariable("idPacienteRegional") String idPacienteRegional) { return service.porPaciente(idPacienteRegional); }
+  @GetMapping @PreAuthorize("hasAnyRole('ADMIN','MEDICO','LABORATORIO')") List<RegistroDto> listar(@RequestParam(defaultValue="") String estado, @RequestParam(defaultValue="") String sede, @RequestParam(defaultValue="") String paciente) { return service.listar(estado, sede, paciente); }
+  @GetMapping("/{id}") @PreAuthorize("hasAnyRole('ADMIN','MEDICO','LABORATORIO')") RegistroDto obtener(@PathVariable("id") Long id) { return service.obtener(id); }
+  @GetMapping("/paciente/{idPacienteRegional}") @PreAuthorize("hasAnyRole('ADMIN','MEDICO','LABORATORIO')") List<RegistroDto> porPaciente(@PathVariable("idPacienteRegional") String idPacienteRegional) { return service.porPaciente(idPacienteRegional); }
   @PostMapping @ResponseStatus(HttpStatus.CREATED) @PreAuthorize("hasAnyRole('ADMIN','MEDICO')") RegistroDto crear(@Valid @RequestBody RegistroRequest request, HttpServletRequest http) { return service.crear(request, http); }
   @PutMapping("/{id}") @PreAuthorize("hasAnyRole('ADMIN','LABORATORIO')") RegistroDto editar(@PathVariable("id") Long id, @Valid @RequestBody RegistroRequest request, HttpServletRequest http) { return service.editar(id, request, http); }
   @PutMapping("/{id}/resultado") @PreAuthorize("hasAnyRole('ADMIN','LABORATORIO')") RegistroDto registrarResultado(@PathVariable("id") Long id, @Valid @RequestBody RegistroRequest request, HttpServletRequest http) { return service.registrarResultado(id, request, http); }
@@ -70,6 +71,12 @@ class RegistroRepository {
     agregarColumna("resultados_laboratorio", "unidad", "TEXT");
     agregarColumna("resultados_laboratorio", "valor_referencia", "TEXT");
     agregarColumna("resultados_laboratorio", "interpretacion", "TEXT");
+    agregarColumna("resultados_laboratorio", "codigo_muestra", "TEXT");
+    agregarColumna("resultados_laboratorio", "tipo_resultado", "TEXT");
+    agregarColumna("resultados_laboratorio", "resultado_critico", "INTEGER DEFAULT 0");
+    agregarColumna("resultados_laboratorio", "hora_resultado", "TEXT");
+    agregarColumna("resultados_laboratorio", "fecha_validacion", "TEXT");
+    agregarColumna("resultados_laboratorio", "usuario_valido", "TEXT");
     jdbc.update("UPDATE resultados_laboratorio SET estado='FINALIZADO' WHERE estado IS NULL AND resultado IS NOT NULL AND TRIM(resultado) <> ''");
     jdbc.update("UPDATE resultados_laboratorio SET estado='PENDIENTE' WHERE estado IS NULL OR TRIM(estado) = ''");
     jdbc.update("UPDATE resultados_laboratorio SET fecha_solicitud=? WHERE fecha_solicitud IS NULL OR TRIM(fecha_solicitud) = ''", LocalDateTime.now().toString());
@@ -89,19 +96,20 @@ class RegistroRepository {
   RegistroDto crear(RegistroRequest r) {
     String estado = normalizarEstado(r.estado(), r.resultado());
     String fechaResultado = "FINALIZADO".equals(estado) ? LocalDateTime.now().toString() : null;
-    jdbc.update("INSERT INTO resultados_laboratorio(id_paciente_regional,cedula,fecha,sede,medico,especialidad,tipo_consulta,diagnostico,tratamiento,motivo,evolucion,tipo_examen,resultado,observaciones,tipo_estudio,formato,url,region_anatomica,estado,prioridad,tecnologo_responsable,fecha_solicitud,fecha_resultado,valores,unidad,valor_referencia,interpretacion) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", normalizarPaciente(r),r.cedula(),r.fecha().toString(),r.sede(),r.medico(),r.especialidad(),r.tipoConsulta(),r.diagnostico(),r.tratamiento(),r.motivo(),r.evolucion(),r.tipoExamen(),r.resultado(),r.observaciones(),r.tipoEstudio(),r.formato(),r.url(),r.regionAnatomica(),estado,normalizarPrioridad(r.prioridad()),r.tecnologoResponsable(),LocalDateTime.now().toString(),fechaResultado,r.valores(),r.unidad(),r.valorReferencia(),r.interpretacion());
+    jdbc.update("INSERT INTO resultados_laboratorio(id_paciente_regional,cedula,fecha,sede,medico,especialidad,tipo_consulta,diagnostico,tratamiento,motivo,evolucion,tipo_examen,resultado,observaciones,tipo_estudio,formato,url,region_anatomica,estado,prioridad,tecnologo_responsable,fecha_solicitud,fecha_resultado,valores,unidad,valor_referencia,interpretacion,codigo_muestra,tipo_resultado,resultado_critico,hora_resultado,fecha_validacion,usuario_valido) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", normalizarPaciente(r),r.cedula(),r.fecha().toString(),r.sede(),r.medico(),r.especialidad(),r.tipoConsulta(),r.diagnostico(),r.tratamiento(),r.motivo(),r.evolucion(),r.tipoExamen(),r.resultado(),r.observaciones(),r.tipoEstudio(),r.formato(),r.url(),r.regionAnatomica(),estado,normalizarPrioridad(r.prioridad()),r.tecnologoResponsable(),LocalDateTime.now().toString(),fechaResultado,r.valores(),r.unidad(),r.valorReferencia(),r.interpretacion(),codigoMuestra(r),r.tipoResultado(),critico(r),fechaResultado == null ? null : LocalTime.now().toString().substring(0,5),fechaResultado,"FINALIZADO".equals(estado) ? usuarioActual() : null);
     Long id = jdbc.queryForObject("SELECT last_insert_rowid()", Long.class);
     return obtener(id).orElseThrow();
   }
   RegistroDto editar(Long id, RegistroRequest r) {
     String estado = normalizarEstado(r.estado(), r.resultado());
     String fechaResultado = "FINALIZADO".equals(estado) ? LocalDateTime.now().toString() : null;
-    int rows = jdbc.update("UPDATE resultados_laboratorio SET id_paciente_regional=?,cedula=?,fecha=?,sede=?,medico=?,especialidad=?,tipo_consulta=?,diagnostico=?,tratamiento=?,motivo=?,evolucion=?,tipo_examen=?,resultado=?,observaciones=?,tipo_estudio=?,formato=?,url=?,region_anatomica=?,estado=?,prioridad=?,tecnologo_responsable=?,fecha_resultado=COALESCE(?,fecha_resultado),valores=?,unidad=?,valor_referencia=?,interpretacion=? WHERE id=?", normalizarPaciente(r),r.cedula(),r.fecha().toString(),r.sede(),r.medico(),r.especialidad(),r.tipoConsulta(),r.diagnostico(),r.tratamiento(),r.motivo(),r.evolucion(),r.tipoExamen(),r.resultado(),r.observaciones(),r.tipoEstudio(),r.formato(),r.url(),r.regionAnatomica(),estado,normalizarPrioridad(r.prioridad()),r.tecnologoResponsable(),fechaResultado,r.valores(),r.unidad(),r.valorReferencia(),r.interpretacion(),id);
+    int rows = jdbc.update("UPDATE resultados_laboratorio SET id_paciente_regional=?,cedula=?,fecha=?,sede=?,medico=?,especialidad=?,tipo_consulta=?,diagnostico=?,tratamiento=?,motivo=?,evolucion=?,tipo_examen=?,resultado=?,observaciones=?,tipo_estudio=?,formato=?,url=?,region_anatomica=?,estado=?,prioridad=?,tecnologo_responsable=?,fecha_resultado=COALESCE(?,fecha_resultado),valores=?,unidad=?,valor_referencia=?,interpretacion=?,codigo_muestra=?,tipo_resultado=?,resultado_critico=?,hora_resultado=COALESCE(?,hora_resultado),fecha_validacion=COALESCE(?,fecha_validacion),usuario_valido=COALESCE(?,usuario_valido) WHERE id=?", normalizarPaciente(r),r.cedula(),r.fecha().toString(),r.sede(),r.medico(),r.especialidad(),r.tipoConsulta(),r.diagnostico(),r.tratamiento(),r.motivo(),r.evolucion(),r.tipoExamen(),r.resultado(),r.observaciones(),r.tipoEstudio(),r.formato(),r.url(),r.regionAnatomica(),estado,normalizarPrioridad(r.prioridad()),r.tecnologoResponsable(),fechaResultado,r.valores(),r.unidad(),r.valorReferencia(),r.interpretacion(),codigoMuestra(r),r.tipoResultado(),critico(r),fechaResultado == null ? null : LocalTime.now().toString().substring(0,5),fechaResultado,"FINALIZADO".equals(estado) || "VALIDADO".equals(estado) ? usuarioActual() : null,id);
     if (rows == 0) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Registro no encontrado.");
     return obtener(id).orElseThrow();
   }
   RegistroDto registrarResultado(Long id, RegistroRequest r) {
-    int rows = jdbc.update("UPDATE resultados_laboratorio SET resultado=?, observaciones=?, estado='FINALIZADO', tecnologo_responsable=?, fecha_resultado=?, valores=?, unidad=?, valor_referencia=?, interpretacion=? WHERE id=?", r.resultado(), r.observaciones(), r.tecnologoResponsable(), LocalDateTime.now().toString(), r.valores(), r.unidad(), r.valorReferencia(), r.interpretacion(), id);
+    LocalDateTime ahora = LocalDateTime.now();
+    int rows = jdbc.update("UPDATE resultados_laboratorio SET resultado=?, observaciones=?, estado='VALIDADO', tecnologo_responsable=?, fecha_resultado=?, valores=?, unidad=?, valor_referencia=?, interpretacion=?, codigo_muestra=?, tipo_resultado=?, resultado_critico=?, hora_resultado=?, fecha_validacion=?, usuario_valido=? WHERE id=?", r.resultado(), r.observaciones(), r.tecnologoResponsable(), ahora.toString(), r.valores(), r.unidad(), r.valorReferencia(), r.interpretacion(), codigoMuestra(r), r.tipoResultado(), critico(r), LocalTime.now().toString().substring(0,5), ahora.toString(), usuarioActual(), id);
     if (rows == 0) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Registro no encontrado.");
     return obtener(id).orElseThrow();
   }
@@ -126,9 +134,13 @@ class RegistroRepository {
   String normalizarEstado(String estado, String resultado) { return estado == null || estado.isBlank() ? (resultado == null || resultado.isBlank() ? "PENDIENTE" : "FINALIZADO") : validarEstado(estado); }
   String validarEstado(String estado) {
     String value = estado == null ? "" : estado.trim().toUpperCase(Locale.ROOT);
-    if (List.of("PENDIENTE", "EN_PROCESO", "FINALIZADO").contains(value)) return value;
+    if (List.of("PENDIENTE", "EN_PROCESO", "FINALIZADO", "VALIDADO").contains(value)) return value;
     throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Estado de laboratorio inválido.");
   }
+  int critico(RegistroRequest r) { return Boolean.TRUE.equals(r.resultadoCritico()) ? 1 : 0; }
+  String codigoMuestra(RegistroRequest r) { return r.codigoMuestra() == null || r.codigoMuestra().isBlank() ? "MUE-" + System.currentTimeMillis() : r.codigoMuestra(); }
+  String usuarioActual() { return org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication() == null ? "sistema" : org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName(); }
   LocalDateTime parseDateTime(String value) { return value == null || value.isBlank() ? null : LocalDateTime.parse(value); }
-  RegistroDto map(java.sql.ResultSet rs, int row) throws java.sql.SQLException { return new RegistroDto(rs.getLong("id"),rs.getString("id_paciente_regional"),rs.getString("cedula"),LocalDate.parse(rs.getString("fecha")),rs.getString("sede"),rs.getString("medico"),rs.getString("especialidad"),rs.getString("tipo_consulta"),rs.getString("diagnostico"),rs.getString("tratamiento"),rs.getString("motivo"),rs.getString("evolucion"),rs.getString("tipo_examen"),rs.getString("resultado"),rs.getString("observaciones"),rs.getString("tipo_estudio"),rs.getString("formato"),rs.getString("url"),rs.getString("region_anatomica"),rs.getString("estado"),rs.getString("prioridad"),rs.getString("tecnologo_responsable"),parseDateTime(rs.getString("fecha_solicitud")),parseDateTime(rs.getString("fecha_resultado")),rs.getString("valores"),rs.getString("unidad"),rs.getString("valor_referencia"),rs.getString("interpretacion")); }
+  LocalTime parseTime(String value) { return value == null || value.isBlank() ? null : LocalTime.parse(value); }
+  RegistroDto map(java.sql.ResultSet rs, int row) throws java.sql.SQLException { return new RegistroDto(rs.getLong("id"),rs.getString("id_paciente_regional"),rs.getString("cedula"),LocalDate.parse(rs.getString("fecha")),rs.getString("sede"),rs.getString("medico"),rs.getString("especialidad"),rs.getString("tipo_consulta"),rs.getString("diagnostico"),rs.getString("tratamiento"),rs.getString("motivo"),rs.getString("evolucion"),rs.getString("tipo_examen"),rs.getString("resultado"),rs.getString("observaciones"),rs.getString("tipo_estudio"),rs.getString("formato"),rs.getString("url"),rs.getString("region_anatomica"),rs.getString("estado"),rs.getString("prioridad"),rs.getString("tecnologo_responsable"),parseDateTime(rs.getString("fecha_solicitud")),parseDateTime(rs.getString("fecha_resultado")),rs.getString("valores"),rs.getString("unidad"),rs.getString("valor_referencia"),rs.getString("interpretacion"),rs.getString("codigo_muestra"),rs.getString("tipo_resultado"),rs.getInt("resultado_critico") == 1,parseTime(rs.getString("hora_resultado")),parseDateTime(rs.getString("fecha_validacion")),rs.getString("usuario_valido")); }
 }

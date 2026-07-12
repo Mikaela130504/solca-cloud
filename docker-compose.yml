@@ -26,7 +26,7 @@ services:
     environment:
       JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Xms64m -Xmx256m}
       JWT_SECRET: ${JWT_SECRET:-solca-cloud-secret-solca-cloud-secret-solca-cloud-secret}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://${PUBLIC_HOST:-localhost}}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost,http://164.68.112.194}
     volumes:
       - ./database/sqlite:/data
     ports:
@@ -39,7 +39,7 @@ services:
     environment:
       JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Xms64m -Xmx256m}
       JWT_SECRET: ${JWT_SECRET:-solca-cloud-secret-solca-cloud-secret-solca-cloud-secret}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://${PUBLIC_HOST:-localhost}}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost,http://164.68.112.194}
     volumes:
       - ./database/sqlite:/data
     ports:
@@ -52,7 +52,7 @@ services:
     environment:
       JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Xms64m -Xmx256m}
       JWT_SECRET: ${JWT_SECRET:-solca-cloud-secret-solca-cloud-secret-solca-cloud-secret}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://${PUBLIC_HOST:-localhost}}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost,http://164.68.112.194}
     volumes:
       - ./database/sqlite:/data
     ports:
@@ -65,7 +65,7 @@ services:
     environment:
       JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Xms64m -Xmx256m}
       JWT_SECRET: ${JWT_SECRET:-solca-cloud-secret-solca-cloud-secret-solca-cloud-secret}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://${PUBLIC_HOST:-localhost}}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost,http://164.68.112.194}
     volumes:
       - ./database/sqlite:/data
     ports:
@@ -78,7 +78,7 @@ services:
     environment:
       JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Xms64m -Xmx256m}
       JWT_SECRET: ${JWT_SECRET:-solca-cloud-secret-solca-cloud-secret-solca-cloud-secret}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://${PUBLIC_HOST:-localhost}}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost,http://164.68.112.194}
     volumes:
       - ./database/sqlite:/data
     ports:
@@ -91,7 +91,7 @@ services:
     environment:
       JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Xms64m -Xmx256m}
       JWT_SECRET: ${JWT_SECRET:-solca-cloud-secret-solca-cloud-secret-solca-cloud-secret}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://${PUBLIC_HOST:-localhost}}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost,http://164.68.112.194}
       SERVICE_PACIENTES: http://paciente-maestro-regional:8080
       SERVICE_CONSULTAS: http://consulta-service:8080
       SERVICE_LABORATORIOS: http://lab-service:8080
