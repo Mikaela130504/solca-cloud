@@ -19,7 +19,7 @@ import { calculateIndicator, getParametersForExam } from "../../utils/laboratory
 import { ROLES } from "../../utils/roles.js";
 import { isNotFutureDate, required, rule } from "../../utils/validators.js";
 
-const ESTADOS_LAB = ["PENDIENTE", "EN_PROCESO", "FINALIZADO", "VALIDADO"];
+const ESTADOS_LAB = ["PENDIENTE", "EN_PROCESO", "FINALIZADO"];
 
 const initialValues = {
   idPacienteRegional: "",
@@ -54,7 +54,12 @@ const rules = {
 };
 
 function StatusBadge({ status }) {
-  return <span className={`status-badge status-${(status || "PENDIENTE").toLowerCase()}`}>{status || "PENDIENTE"}</span>;
+  const normalized = normalizeStatus(status);
+  return <span className={`status-badge status-${normalized.toLowerCase()}`}>{normalized}</span>;
+}
+
+function normalizeStatus(status) {
+  return status === "VALIDADO" ? "FINALIZADO" : (status || "PENDIENTE");
 }
 
 function parseStoredParameters(value, exam) {
@@ -84,7 +89,7 @@ export default function Laboratory() {
   const [toast, setToast] = useState({ message: "", type: "success" });
 
   const filteredOrders = useMemo(() => orders.filter((order) => (
-    (!filters.estado || order.estado === filters.estado) &&
+    (!filters.estado || normalizeStatus(order.estado) === filters.estado) &&
     (!filters.sede || order.sede === filters.sede) &&
     (!filters.paciente || `${order.idPacienteRegional} ${order.cedula}`.toLowerCase().includes(filters.paciente.toLowerCase()))
   )), [orders, filters]);
@@ -174,7 +179,7 @@ export default function Laboratory() {
       interpretacion: order.interpretacion || (parameters.some((item) => item.indicator && item.indicator !== "NORMAL") ? "ANORMAL" : "NORMAL"),
       resultadoCritico: Boolean(order.resultadoCritico),
       tecnologoResponsable: order.tecnologoResponsable || user?.name || user?.username || "",
-      observaciones: "",
+      observaciones: order.observacionesLaboratorio || "",
     });
     if (canProcess && order.estado === "PENDIENTE") {
       await updateLaboratoryState(order.id, "EN_PROCESO");
@@ -187,18 +192,19 @@ export default function Laboratory() {
     if (!activeOrder || !canProcess) return;
     setSaving(true);
     try {
-      await saveLaboratoryResult(activeOrder.id, {
+      const saved = await saveLaboratoryResult(activeOrder.id, {
         ...result,
         valores: JSON.stringify(result.parameters),
         resultado: result.parameters.map((item) => `${item.name}: ${item.value || "Sin valor"} ${item.unit} (${item.indicator || "Sin indicador"})`).join("; "),
+        observacionesLaboratorio: result.observaciones,
         cedula: activeOrder.cedula,
         idPacienteRegional: activeOrder.idPacienteRegional,
         fecha: activeOrder.fecha,
         sede: activeOrder.sede,
       });
-      setToast({ message: "Resultado validado. Estado FINALIZADO.", type: "success" });
-      setActiveOrder(null);
-      setResult(resultInitial);
+      setToast({ message: "Resultado guardado correctamente.", type: "success" });
+      setActiveOrder(saved);
+      setResult((current) => ({ ...current, observaciones: saved.observacionesLaboratorio || current.observaciones }));
       await loadOrders();
     } catch (error) {
       setToast({ message: getApiErrorMessage(error, "No fue posible guardar el resultado."), type: "error" });
@@ -284,7 +290,7 @@ export default function Laboratory() {
                     <td>{order.prioridad || "NORMAL"}</td>
                     <td>{order.sede}</td>
                     <td>{order.fecha}</td>
-                    <td><Button variant="secondary" onClick={() => selectOrder(order)}>{canProcess && order.estado !== "FINALIZADO" ? "Procesar" : "Ver"}</Button></td>
+                    <td><Button variant="secondary" onClick={() => selectOrder(order)}>{canProcess && normalizeStatus(order.estado) !== "FINALIZADO" ? "Procesar" : "Editar"}</Button></td>
                   </tr>
                 ))}
               </tbody>
@@ -316,8 +322,8 @@ export default function Laboratory() {
           </div>
           <form onSubmit={saveResult}>
             <div className="grid grid-3 form-section">
-              <Input label="Código único de muestra" name="codigoMuestra" value={result.codigoMuestra} onChange={(event) => setResult((current) => ({ ...current, codigoMuestra: event.target.value }))} readOnly={!canProcess || activeOrder.estado === "VALIDADO"} />
-              <Input label="Tecnólogo responsable" name="tecnologoResponsable" value={result.tecnologoResponsable} onChange={(event) => setResult((current) => ({ ...current, tecnologoResponsable: event.target.value }))} readOnly={!canProcess || activeOrder.estado === "VALIDADO"} />
+              <Input label="Código único de muestra" name="codigoMuestra" value={result.codigoMuestra} onChange={(event) => setResult((current) => ({ ...current, codigoMuestra: event.target.value }))} readOnly={!canProcess} />
+              <Input label="Tecnólogo responsable" name="tecnologoResponsable" value={result.tecnologoResponsable} onChange={(event) => setResult((current) => ({ ...current, tecnologoResponsable: event.target.value }))} readOnly={!canProcess} />
             </div>
             <div className="table-wrap form-section">
               <table className="data-table">
@@ -335,7 +341,7 @@ export default function Laboratory() {
                     <tr key={parameter.name}>
                       <td>{parameter.name}</td>
                       <td>
-                        <input className="table-input" value={parameter.value || ""} onChange={(event) => updateParameter(index, event.target.value)} disabled={!canProcess || activeOrder.estado === "VALIDADO"} />
+                        <input className="table-input" value={parameter.value || ""} onChange={(event) => updateParameter(index, event.target.value)} disabled={!canProcess} />
                       </td>
                       <td>{parameter.unit}</td>
                       <td>{parameter.min}-{parameter.max}</td>
@@ -346,13 +352,13 @@ export default function Laboratory() {
               </table>
             </div>
             <div className="grid grid-3 form-section">
-              <Select label="Resultado crítico" name="resultadoCritico" value={result.resultadoCritico ? "Sí" : "No"} onChange={(event) => setResult((current) => ({ ...current, resultadoCritico: event.target.value === "Sí" }))} options={["No", "Sí"]} disabled={!canProcess || activeOrder.estado === "VALIDADO"} />
-              <Input label="Interpretación del laboratorista" name="interpretacion" value={result.interpretacion} onChange={(event) => setResult((current) => ({ ...current, interpretacion: event.target.value }))} readOnly={!canProcess || activeOrder.estado === "VALIDADO"} />
+              <Select label="Resultado crítico" name="resultadoCritico" value={result.resultadoCritico ? "Sí" : "No"} onChange={(event) => setResult((current) => ({ ...current, resultadoCritico: event.target.value === "Sí" }))} options={["No", "Sí"]} disabled={!canProcess} />
+              <Input label="Interpretación del laboratorista" name="interpretacion" value={result.interpretacion} onChange={(event) => setResult((current) => ({ ...current, interpretacion: event.target.value }))} readOnly={!canProcess} />
             </div>
-            <Input label="Observaciones del laboratorista" type="textarea" name="observaciones" value={result.observaciones} onChange={(event) => setResult((current) => ({ ...current, observaciones: event.target.value }))} readOnly={!canProcess || activeOrder.estado === "VALIDADO"} />
+            <Input label="Observaciones del laboratorista" type="textarea" name="observaciones" value={result.observaciones} onChange={(event) => setResult((current) => ({ ...current, observaciones: event.target.value }))} readOnly={!canProcess} />
             <div className="actions">
               <Button type="button" variant="ghost" onClick={() => setActiveOrder(null)}>Cerrar</Button>
-              {canProcess && activeOrder.estado !== "VALIDADO" && <Button type="submit" loading={saving}>Validar resultado</Button>}
+              {canProcess && <Button type="submit" loading={saving}>{normalizeStatus(activeOrder.estado) === "FINALIZADO" ? "Guardar cambios" : "Guardar resultado"}</Button>}
             </div>
           </form>
         </Card>

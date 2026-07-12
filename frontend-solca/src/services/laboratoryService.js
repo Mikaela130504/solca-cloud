@@ -54,6 +54,7 @@ export async function saveLaboratoryResult(id, result) {
     resultadoCritico: result.resultadoCritico,
     valores: result.valores,
     interpretacion: result.interpretacion,
+    observacionesLaboratorio: result.observacionesLaboratorio,
   });
   return data;
 }

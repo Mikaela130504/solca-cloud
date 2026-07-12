@@ -23,8 +23,8 @@ public class LaboratorioServiceApplication {
   @Bean CommandLineRunner schema(RegistroRepository repo) { return args -> repo.schema(); }
 }
 
-record RegistroDto(Long id, String idPacienteRegional, String cedula, LocalDate fecha, String sede, String medico, String especialidad, String tipoConsulta, String diagnostico, String tratamiento, String motivo, String evolucion, String tipoExamen, String resultado, String observaciones, String tipoEstudio, String formato, String url, String regionAnatomica, String estado, String prioridad, String tecnologoResponsable, LocalDateTime fechaSolicitud, LocalDateTime fechaResultado, String valores, String unidad, String valorReferencia, String interpretacion, String codigoMuestra, String tipoResultado, Boolean resultadoCritico, LocalTime horaResultado, LocalDateTime fechaValidacion, String usuarioValido) {}
-record RegistroRequest(@NotBlank String cedula, String idPacienteRegional, @NotNull LocalDate fecha, @NotBlank String sede, String medico, String especialidad, String tipoConsulta, String diagnostico, String tratamiento, String motivo, String evolucion, String tipoExamen, String resultado, String observaciones, String tipoEstudio, String formato, String url, String regionAnatomica, String estado, String prioridad, String tecnologoResponsable, String valores, String unidad, String valorReferencia, String interpretacion, String codigoMuestra, String tipoResultado, Boolean resultadoCritico) {}
+record RegistroDto(Long id, String idPacienteRegional, String cedula, LocalDate fecha, String sede, String medico, String especialidad, String tipoConsulta, String diagnostico, String tratamiento, String motivo, String evolucion, String tipoExamen, String resultado, String observaciones, String tipoEstudio, String formato, String url, String regionAnatomica, String estado, String prioridad, String tecnologoResponsable, LocalDateTime fechaSolicitud, LocalDateTime fechaResultado, String valores, String unidad, String valorReferencia, String interpretacion, String codigoMuestra, String tipoResultado, Boolean resultadoCritico, LocalTime horaResultado, LocalDateTime fechaValidacion, String usuarioValido, String observacionesLaboratorio) {}
+record RegistroRequest(@NotBlank String cedula, String idPacienteRegional, @NotNull LocalDate fecha, @NotBlank String sede, String medico, String especialidad, String tipoConsulta, String diagnostico, String tratamiento, String motivo, String evolucion, String tipoExamen, String resultado, String observaciones, String tipoEstudio, String formato, String url, String regionAnatomica, String estado, String prioridad, String tecnologoResponsable, String valores, String unidad, String valorReferencia, String interpretacion, String codigoMuestra, String tipoResultado, Boolean resultadoCritico, String observacionesLaboratorio) {}
 
 @RestController
 @RequestMapping("/laboratorios")
@@ -77,7 +77,9 @@ class RegistroRepository {
     agregarColumna("resultados_laboratorio", "hora_resultado", "TEXT");
     agregarColumna("resultados_laboratorio", "fecha_validacion", "TEXT");
     agregarColumna("resultados_laboratorio", "usuario_valido", "TEXT");
+    agregarColumna("resultados_laboratorio", "observaciones_laboratorio", "TEXT");
     jdbc.update("UPDATE resultados_laboratorio SET estado='FINALIZADO' WHERE estado IS NULL AND resultado IS NOT NULL AND TRIM(resultado) <> ''");
+    jdbc.update("UPDATE resultados_laboratorio SET estado='FINALIZADO' WHERE estado='VALIDADO'");
     jdbc.update("UPDATE resultados_laboratorio SET estado='PENDIENTE' WHERE estado IS NULL OR TRIM(estado) = ''");
     jdbc.update("UPDATE resultados_laboratorio SET fecha_solicitud=? WHERE fecha_solicitud IS NULL OR TRIM(fecha_solicitud) = ''", LocalDateTime.now().toString());
     migrarRegistros("resultados_laboratorio");
@@ -109,7 +111,7 @@ class RegistroRepository {
   }
   RegistroDto registrarResultado(Long id, RegistroRequest r) {
     LocalDateTime ahora = LocalDateTime.now();
-    int rows = jdbc.update("UPDATE resultados_laboratorio SET resultado=?, observaciones=?, estado='VALIDADO', tecnologo_responsable=?, fecha_resultado=?, valores=?, unidad=?, valor_referencia=?, interpretacion=?, codigo_muestra=?, tipo_resultado=?, resultado_critico=?, hora_resultado=?, fecha_validacion=?, usuario_valido=? WHERE id=?", r.resultado(), r.observaciones(), r.tecnologoResponsable(), ahora.toString(), r.valores(), r.unidad(), r.valorReferencia(), r.interpretacion(), codigoMuestra(r), r.tipoResultado(), critico(r), LocalTime.now().toString().substring(0,5), ahora.toString(), usuarioActual(), id);
+    int rows = jdbc.update("UPDATE resultados_laboratorio SET resultado=?, estado='FINALIZADO', tecnologo_responsable=?, fecha_resultado=?, valores=?, unidad=?, valor_referencia=?, interpretacion=?, codigo_muestra=?, tipo_resultado=?, resultado_critico=?, hora_resultado=?, fecha_validacion=?, usuario_valido=?, observaciones_laboratorio=? WHERE id=?", r.resultado(), r.tecnologoResponsable(), ahora.toString(), r.valores(), r.unidad(), r.valorReferencia(), r.interpretacion(), codigoMuestra(r), r.tipoResultado(), critico(r), LocalTime.now().toString().substring(0,5), ahora.toString(), usuarioActual(), r.observacionesLaboratorio(), id);
     if (rows == 0) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Registro no encontrado.");
     return obtener(id).orElseThrow();
   }
@@ -134,7 +136,7 @@ class RegistroRepository {
   String normalizarEstado(String estado, String resultado) { return estado == null || estado.isBlank() ? (resultado == null || resultado.isBlank() ? "PENDIENTE" : "FINALIZADO") : validarEstado(estado); }
   String validarEstado(String estado) {
     String value = estado == null ? "" : estado.trim().toUpperCase(Locale.ROOT);
-    if (List.of("PENDIENTE", "EN_PROCESO", "FINALIZADO", "VALIDADO").contains(value)) return value;
+    if (List.of("PENDIENTE", "EN_PROCESO", "FINALIZADO").contains(value)) return value;
     throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Estado de laboratorio inválido.");
   }
   int critico(RegistroRequest r) { return Boolean.TRUE.equals(r.resultadoCritico()) ? 1 : 0; }
@@ -142,5 +144,5 @@ class RegistroRepository {
   String usuarioActual() { return org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication() == null ? "sistema" : org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName(); }
   LocalDateTime parseDateTime(String value) { return value == null || value.isBlank() ? null : LocalDateTime.parse(value); }
   LocalTime parseTime(String value) { return value == null || value.isBlank() ? null : LocalTime.parse(value); }
-  RegistroDto map(java.sql.ResultSet rs, int row) throws java.sql.SQLException { return new RegistroDto(rs.getLong("id"),rs.getString("id_paciente_regional"),rs.getString("cedula"),LocalDate.parse(rs.getString("fecha")),rs.getString("sede"),rs.getString("medico"),rs.getString("especialidad"),rs.getString("tipo_consulta"),rs.getString("diagnostico"),rs.getString("tratamiento"),rs.getString("motivo"),rs.getString("evolucion"),rs.getString("tipo_examen"),rs.getString("resultado"),rs.getString("observaciones"),rs.getString("tipo_estudio"),rs.getString("formato"),rs.getString("url"),rs.getString("region_anatomica"),rs.getString("estado"),rs.getString("prioridad"),rs.getString("tecnologo_responsable"),parseDateTime(rs.getString("fecha_solicitud")),parseDateTime(rs.getString("fecha_resultado")),rs.getString("valores"),rs.getString("unidad"),rs.getString("valor_referencia"),rs.getString("interpretacion"),rs.getString("codigo_muestra"),rs.getString("tipo_resultado"),rs.getInt("resultado_critico") == 1,parseTime(rs.getString("hora_resultado")),parseDateTime(rs.getString("fecha_validacion")),rs.getString("usuario_valido")); }
+  RegistroDto map(java.sql.ResultSet rs, int row) throws java.sql.SQLException { return new RegistroDto(rs.getLong("id"),rs.getString("id_paciente_regional"),rs.getString("cedula"),LocalDate.parse(rs.getString("fecha")),rs.getString("sede"),rs.getString("medico"),rs.getString("especialidad"),rs.getString("tipo_consulta"),rs.getString("diagnostico"),rs.getString("tratamiento"),rs.getString("motivo"),rs.getString("evolucion"),rs.getString("tipo_examen"),rs.getString("resultado"),rs.getString("observaciones"),rs.getString("tipo_estudio"),rs.getString("formato"),rs.getString("url"),rs.getString("region_anatomica"),rs.getString("estado"),rs.getString("prioridad"),rs.getString("tecnologo_responsable"),parseDateTime(rs.getString("fecha_solicitud")),parseDateTime(rs.getString("fecha_resultado")),rs.getString("valores"),rs.getString("unidad"),rs.getString("valor_referencia"),rs.getString("interpretacion"),rs.getString("codigo_muestra"),rs.getString("tipo_resultado"),rs.getInt("resultado_critico") == 1,parseTime(rs.getString("hora_resultado")),parseDateTime(rs.getString("fecha_validacion")),rs.getString("usuario_valido"),rs.getString("observaciones_laboratorio")); }
 }
