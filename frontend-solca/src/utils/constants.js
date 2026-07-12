@@ -15,8 +15,6 @@ export const HOSPITAL_BRANCHES = [
   "SOLCA Quito",
   "SOLCA Guayaquil",
   "SOLCA Cuenca",
-  "SOLCA Manabí",
-  "SOLCA Loja",
 ];
 
 export const BLOOD_TYPES = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];

@@ -11,6 +11,7 @@ export async function createLaboratoryOrder(order) {
     medico: order.medico,
     especialidad: order.especialidad,
     tipoConsulta: order.tipoConsulta,
+    consultaId: order.consultaId,
     diagnostico: order.diagnostico || order.diagnosticoPresuntivo,
     tipoExamen: order.tipoExamen,
     resultado: order.resultado || order.resultados,

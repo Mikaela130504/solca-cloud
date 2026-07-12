@@ -46,6 +46,7 @@ class PacienteService {
   PacienteService(PacienteRepository repo) { this.repo = repo; }
   List<PacienteDto> listar(String q) { return repo.listar(q); }
   PacienteDto crear(PacienteRequest r, HttpServletRequest http) {
+    Sedes.validar(r.sede());
     if (!Cedula.valida(r.cedula())) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cédula ecuatoriana inválida.");
     if (r.fechaNacimiento().isAfter(LocalDate.now())) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La fecha de nacimiento no puede ser futura.");
     if (repo.existeCedula(r.cedula())) throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe un paciente con esa cédula.");
@@ -55,6 +56,7 @@ class PacienteService {
     return dto;
   }
   PacienteDto editar(String id, PacienteRequest r, HttpServletRequest http) {
+    Sedes.validar(r.sede());
     if (!Cedula.valida(r.cedula())) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cédula ecuatoriana inválida.");
     if (r.fechaNacimiento().isAfter(LocalDate.now())) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La fecha de nacimiento no puede ser futura.");
     PacienteDto dto = repo.editar(id, r); Auditoria.registrar(repo.jdbc(), "EDITAR_PACIENTE", id, http); return dto;
@@ -62,7 +64,7 @@ class PacienteService {
   void eliminar(String id, HttpServletRequest http) { repo.eliminar(id); Auditoria.registrar(repo.jdbc(), "ELIMINAR_PACIENTE", id, http); }
   PacienteDto porCedula(String cedula) { return repo.porCedula(cedula).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Paciente no encontrado.")); }
   PacienteDto porId(String id) { return repo.porId(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Paciente no encontrado.")); }
-  void asociar(String id, HistoriaLocalRequest r, HttpServletRequest http) { repo.asociar(id, r); Auditoria.registrar(repo.jdbc(), "ASOCIAR_HISTORIA_LOCAL", id, http); }
+  void asociar(String id, HistoriaLocalRequest r, HttpServletRequest http) { Sedes.validar(r.sede()); repo.asociar(id, r); Auditoria.registrar(repo.jdbc(), "ASOCIAR_HISTORIA_LOCAL", id, http); }
 }
 
 @org.springframework.stereotype.Repository
@@ -73,6 +75,8 @@ class PacienteRepository {
   void schema() {
     jdbc.execute("CREATE TABLE IF NOT EXISTS pacientes (id INTEGER PRIMARY KEY AUTOINCREMENT, id_paciente_regional TEXT NOT NULL UNIQUE, cedula TEXT NOT NULL UNIQUE, nombres TEXT NOT NULL, apellidos TEXT NOT NULL, fecha_nacimiento TEXT NOT NULL, edad INTEGER, sexo TEXT NOT NULL, estado_civil TEXT NOT NULL, direccion TEXT NOT NULL, provincia TEXT NOT NULL, ciudad TEXT NOT NULL, telefono TEXT NOT NULL, correo TEXT NOT NULL, contacto_emergencia TEXT NOT NULL, seguro TEXT NOT NULL, tipo_sangre TEXT NOT NULL, nacionalidad TEXT NOT NULL, observaciones TEXT, sede TEXT)");
     jdbc.execute("CREATE TABLE IF NOT EXISTS historias_clinicas_locales (id INTEGER PRIMARY KEY AUTOINCREMENT, id_paciente_regional TEXT NOT NULL, sede TEXT NOT NULL, identificador_historia_local TEXT NOT NULL, UNIQUE(sede, identificador_historia_local), FOREIGN KEY(id_paciente_regional) REFERENCES pacientes(id_paciente_regional))");
+    jdbc.update("UPDATE pacientes SET sede='SOLCA Quito' WHERE sede IS NULL OR TRIM(sede) = '' OR sede NOT IN ('SOLCA Cuenca','SOLCA Quito','SOLCA Guayaquil')");
+    jdbc.update("DELETE FROM historias_clinicas_locales WHERE sede NOT IN ('SOLCA Cuenca','SOLCA Quito','SOLCA Guayaquil')");
     jdbc.execute("CREATE INDEX IF NOT EXISTS idx_pacientes_cedula ON pacientes(cedula)");
     Auditoria.crearTabla(jdbc);
   }
@@ -118,7 +122,7 @@ class PacienteRepository {
     }
   }
   void normalizarSedesSinDato() {
-    jdbc.update("UPDATE pacientes SET sede='SOLCA Quito' WHERE sede IS NULL OR TRIM(sede) = ''");
+    jdbc.update("UPDATE pacientes SET sede='SOLCA Quito' WHERE sede IS NULL OR TRIM(sede) = '' OR sede NOT IN ('SOLCA Cuenca','SOLCA Quito','SOLCA Guayaquil')");
   }
   List<PacienteDto> listar(String q) { String like = "%" + q + "%"; return jdbc.query("SELECT * FROM pacientes WHERE nombres LIKE ? OR apellidos LIKE ? OR cedula LIKE ? OR id_paciente_regional LIKE ? ORDER BY apellidos,nombres", this::map, like, like, like, like); }
   Optional<PacienteDto> porCedula(String cedula) { return jdbc.query("SELECT * FROM pacientes WHERE cedula=?", this::map, cedula).stream().findFirst(); }
@@ -126,6 +130,15 @@ class PacienteRepository {
   List<HistoriaLocalDto> historias(String id) { return jdbc.query("SELECT sede, identificador_historia_local FROM historias_clinicas_locales WHERE id_paciente_regional=? ORDER BY sede", (rs, row) -> new HistoriaLocalDto(rs.getString("sede"), rs.getString("identificador_historia_local")), id); }
   PacienteDto map(java.sql.ResultSet rs, int row) throws java.sql.SQLException { String idRegional = rs.getString("id_paciente_regional"); return new PacienteDto(rs.getLong("id"),idRegional,rs.getString("cedula"),rs.getString("nombres"),rs.getString("apellidos"),LocalDate.parse(rs.getString("fecha_nacimiento")),rs.getInt("edad"),rs.getString("sexo"),rs.getString("estado_civil"),rs.getString("direccion"),rs.getString("provincia"),rs.getString("ciudad"),rs.getString("telefono"),rs.getString("correo"),rs.getString("contacto_emergencia"),rs.getString("seguro"),rs.getString("tipo_sangre"),rs.getString("nacionalidad"),rs.getString("observaciones"),rs.getString("sede"),historias(idRegional)); }
   int edad(LocalDate n) { return java.time.Period.between(n, LocalDate.now()).getYears(); }
+}
+
+class Sedes {
+  static final List<String> OFICIALES = List.of("SOLCA Cuenca", "SOLCA Quito", "SOLCA Guayaquil");
+  static void validar(String sede) {
+    if (sede == null || !OFICIALES.contains(sede.trim())) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sede inválida. Use SOLCA Cuenca, SOLCA Quito o SOLCA Guayaquil.");
+    }
+  }
 }
 
 class Cedula {

@@ -35,8 +35,10 @@ const initialValues = {
 
 const resultInitial = {
   formato: "",
-  resultado: "",
+  hallazgos: "",
+  conclusion: "",
   observaciones: "",
+  recomendaciones: "",
   tecnicoResponsable: "",
   hora: new Date().toTimeString().slice(0, 5),
   archivo: null,
@@ -151,8 +153,10 @@ export default function Imaging() {
     setFileName("");
     setResult({
       formato: study.formato || "DICOM",
-      resultado: study.resultado || "",
-      observaciones: study.observacionesImagenologo || study.observaciones || "",
+      hallazgos: study.hallazgos || "",
+      conclusion: study.resultado || "",
+      observaciones: study.observacionesImagenologo || "",
+      recomendaciones: study.recomendaciones || "",
       tecnicoResponsable: study.tecnicoResponsable || user?.name || user?.username || "",
       hora: study.hora || new Date().toTimeString().slice(0, 5),
       archivo: null,
@@ -296,8 +300,10 @@ export default function Imaging() {
               <Input label="Técnico responsable" name="tecnicoResponsable" value={result.tecnicoResponsable} onChange={(event) => setResult((current) => ({ ...current, tecnicoResponsable: event.target.value }))} readOnly={!canProcess || activeStudy.estado === "INFORMADO"} />
               <Input label="Hora del estudio" type="time" name="hora" value={result.hora} onChange={(event) => setResult((current) => ({ ...current, hora: event.target.value }))} readOnly={!canProcess || activeStudy.estado === "INFORMADO"} />
               <Select label="Formato final" name="formato" value={result.formato} onChange={(event) => setResult((current) => ({ ...current, formato: event.target.value }))} options={FORMATOS_IMAGEN} disabled={!canProcess || activeStudy.estado === "INFORMADO"} />
-              <Input label="Informe del imagenólogo" type="textarea" name="resultado" value={result.resultado} onChange={(event) => setResult((current) => ({ ...current, resultado: event.target.value }))} readOnly={!canProcess || activeStudy.estado === "INFORMADO"} />
-              <Input label="Conclusión diagnóstica / observaciones del imagenólogo" type="textarea" name="observaciones" value={result.observaciones} onChange={(event) => setResult((current) => ({ ...current, observaciones: event.target.value }))} readOnly={!canProcess || activeStudy.estado === "INFORMADO"} />
+              <Input label="Hallazgos" type="textarea" name="hallazgos" value={result.hallazgos} onChange={(event) => setResult((current) => ({ ...current, hallazgos: event.target.value }))} readOnly={!canProcess || activeStudy.estado === "INFORMADO"} />
+              <Input label="Conclusión diagnóstica" type="textarea" name="conclusion" value={result.conclusion} onChange={(event) => setResult((current) => ({ ...current, conclusion: event.target.value }))} readOnly={!canProcess || activeStudy.estado === "INFORMADO"} />
+              <Input label="Observaciones del imagenólogo" type="textarea" name="observaciones" value={result.observaciones} onChange={(event) => setResult((current) => ({ ...current, observaciones: event.target.value }))} readOnly={!canProcess || activeStudy.estado === "INFORMADO"} />
+              <Input label="Recomendaciones" type="textarea" name="recomendaciones" value={result.recomendaciones} onChange={(event) => setResult((current) => ({ ...current, recomendaciones: event.target.value }))} readOnly={!canProcess || activeStudy.estado === "INFORMADO"} />
               {canProcess && activeStudy.estado !== "INFORMADO" && (
                 <label className="field">
                   <span className="field-label">Archivo diagnóstico</span>

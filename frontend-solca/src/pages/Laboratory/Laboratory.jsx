@@ -38,7 +38,7 @@ const initialValues = {
 const resultInitial = {
   codigoMuestra: "",
   parameters: [],
-  interpretacion: "NORMAL",
+  interpretacion: "",
   resultadoCritico: false,
   tecnologoResponsable: "",
   observaciones: "",
@@ -70,6 +70,14 @@ function parseStoredParameters(value, exam) {
     // El registro anterior pudo guardar texto libre.
   }
   return getParametersForExam(exam).map((parameter) => ({ ...parameter, value: "", indicator: "" }));
+}
+
+function buildLabInterpretation(parameters) {
+  const withValues = parameters.filter((item) => item.value !== undefined && item.value !== null && String(item.value).trim() !== "");
+  if (!withValues.length) return "";
+  return withValues.some((item) => item.indicator && item.indicator !== "NORMAL")
+    ? "Se encontraron parámetros fuera del rango de referencia."
+    : "Resultados dentro de parámetros normales.";
 }
 
 export default function Laboratory() {
@@ -176,7 +184,7 @@ export default function Laboratory() {
     setResult({
       codigoMuestra: order.codigoMuestra || `MUE-${String(order.id).padStart(6, "0")}`,
       parameters,
-      interpretacion: order.interpretacion || (parameters.some((item) => item.indicator && item.indicator !== "NORMAL") ? "ANORMAL" : "NORMAL"),
+      interpretacion: order.interpretacion || buildLabInterpretation(parameters),
       resultadoCritico: Boolean(order.resultadoCritico),
       tecnologoResponsable: order.tecnologoResponsable || user?.name || user?.username || "",
       observaciones: order.observacionesLaboratorio || "",
@@ -218,11 +226,10 @@ export default function Laboratory() {
       const parameters = current.parameters.map((item, itemIndex) => (
         itemIndex === index ? { ...item, value, indicator: calculateIndicator(value, item) } : item
       ));
-      const hasCritical = parameters.some((item) => item.indicator === "BAJO" || item.indicator === "ALTO");
       return {
         ...current,
         parameters,
-        interpretacion: hasCritical ? "ANORMAL" : "NORMAL",
+        interpretacion: buildLabInterpretation(parameters),
         resultadoCritico: parameters.some((item) => item.indicator === "ALTO" || item.indicator === "BAJO") && current.resultadoCritico,
       };
     });

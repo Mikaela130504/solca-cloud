@@ -157,7 +157,7 @@ export default function Consultation() {
     setSaving(true);
     try {
       const diagnosticoTexto = `${form.values.cie10} - ${form.values.diagnostico}`;
-      await createConsultation({
+      const savedConsultation = await createConsultation({
         ...form.values,
         diagnostico: diagnosticoTexto,
         tratamiento: form.values.plan,
@@ -173,6 +173,7 @@ export default function Consultation() {
           medico: form.values.medico,
           especialidad: form.values.especialidad,
           tipoConsulta: form.values.tipoConsulta,
+          consultaId: savedConsultation.id,
           diagnostico: diagnosticoTexto,
           tipoExamen: form.values.tipoExamenLaboratorio,
           prioridad: form.values.prioridadLaboratorio,
@@ -189,6 +190,7 @@ export default function Consultation() {
           medico: form.values.medico,
           especialidad: form.values.especialidad,
           tipoConsulta: form.values.tipoConsulta,
+          consultaId: savedConsultation.id,
           diagnostico: diagnosticoTexto,
           tipoEstudio: form.values.tipoEstudioImagen,
           regionAnatomica: form.values.regionAnatomica,

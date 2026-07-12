@@ -44,8 +44,8 @@ class RegistroService {
   List<RegistroDto> listar() { return repo.listar(); }
   RegistroDto obtener(Long id) { return repo.obtener(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Registro no encontrado.")); }
   List<RegistroDto> porPaciente(String id) { return repo.porPaciente(id); }
-  RegistroDto crear(RegistroRequest r, HttpServletRequest http) { if (r.fecha().isAfter(LocalDate.now())) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La fecha no puede ser futura."); RegistroDto dto = repo.crear(r); Auditoria.registrar(repo.jdbc(), "CREAR_CONSULTA", dto.idPacienteRegional(), http); return dto; }
-  RegistroDto editar(Long id, RegistroRequest r, HttpServletRequest http) { if (r.fecha().isAfter(LocalDate.now())) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La fecha no puede ser futura."); RegistroDto dto = repo.editar(id, r); Auditoria.registrar(repo.jdbc(), "EDITAR_CONSULTA", dto.idPacienteRegional(), http); return dto; }
+  RegistroDto crear(RegistroRequest r, HttpServletRequest http) { if (r.fecha().isAfter(LocalDate.now())) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La fecha no puede ser futura."); Sedes.validar(r.sede()); RegistroDto dto = repo.crear(r); Auditoria.registrar(repo.jdbc(), "CREAR_CONSULTA", dto.idPacienteRegional(), http); return dto; }
+  RegistroDto editar(Long id, RegistroRequest r, HttpServletRequest http) { if (r.fecha().isAfter(LocalDate.now())) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La fecha no puede ser futura."); Sedes.validar(r.sede()); RegistroDto dto = repo.editar(id, r); Auditoria.registrar(repo.jdbc(), "EDITAR_CONSULTA", dto.idPacienteRegional(), http); return dto; }
   void eliminar(Long id, HttpServletRequest http) { String paciente = obtener(id).idPacienteRegional(); repo.eliminar(id); Auditoria.registrar(repo.jdbc(), "ELIMINAR_CONSULTA", paciente, http); }
 }
 
@@ -56,6 +56,7 @@ class RegistroRepository {
   JdbcTemplate jdbc() { return jdbc; }
   void schema() {
     jdbc.execute("CREATE TABLE IF NOT EXISTS consultas (id INTEGER PRIMARY KEY AUTOINCREMENT, id_paciente_regional TEXT, cedula TEXT NOT NULL, fecha TEXT NOT NULL, sede TEXT NOT NULL, medico TEXT, especialidad TEXT, tipo_consulta TEXT, diagnostico TEXT, tratamiento TEXT, motivo TEXT, evolucion TEXT, tipo_examen TEXT, resultado TEXT, observaciones TEXT, tipo_estudio TEXT, formato TEXT, url TEXT, region_anatomica TEXT)");
+    jdbc.update("UPDATE consultas SET sede='SOLCA Quito' WHERE sede IS NULL OR TRIM(sede) = '' OR sede NOT IN ('SOLCA Cuenca','SOLCA Quito','SOLCA Guayaquil')");
     migrarRegistros("consultas");
     jdbc.execute("CREATE INDEX IF NOT EXISTS idx_consultas_paciente ON consultas(id_paciente_regional)");
     jdbc.execute("CREATE INDEX IF NOT EXISTS idx_consultas_cedula ON consultas(cedula)");
@@ -81,4 +82,13 @@ class RegistroRepository {
   Optional<RegistroDto> obtener(Long id) { return jdbc.query("SELECT * FROM consultas WHERE id=?", this::map, id).stream().findFirst(); }
   String normalizarPaciente(RegistroRequest r) { return r.idPacienteRegional() == null || r.idPacienteRegional().isBlank() ? r.cedula() : r.idPacienteRegional(); }
   RegistroDto map(java.sql.ResultSet rs, int row) throws java.sql.SQLException { return new RegistroDto(rs.getLong("id"),rs.getString("id_paciente_regional"),rs.getString("cedula"),LocalDate.parse(rs.getString("fecha")),rs.getString("sede"),rs.getString("medico"),rs.getString("especialidad"),rs.getString("tipo_consulta"),rs.getString("diagnostico"),rs.getString("tratamiento"),rs.getString("motivo"),rs.getString("evolucion"),rs.getString("tipo_examen"),rs.getString("resultado"),rs.getString("observaciones"),rs.getString("tipo_estudio"),rs.getString("formato"),rs.getString("url"),rs.getString("region_anatomica")); }
+}
+
+class Sedes {
+  static final List<String> OFICIALES = List.of("SOLCA Cuenca", "SOLCA Quito", "SOLCA Guayaquil");
+  static void validar(String sede) {
+    if (sede == null || !OFICIALES.contains(sede.trim())) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sede inválida. Use SOLCA Cuenca, SOLCA Quito o SOLCA Guayaquil.");
+    }
+  }
 }

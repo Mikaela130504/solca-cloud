@@ -12,6 +12,7 @@ export async function createImagingStudy(study) {
     medico: study.medico,
     especialidad: study.especialidad,
     tipoConsulta: study.tipoConsulta,
+    consultaId: study.consultaId,
     diagnostico: study.diagnostico,
     tipoEstudio: study.tipoEstudio,
     formato: study.formato,
@@ -55,8 +56,10 @@ export async function saveImagingResult(id, study) {
   const formData = new FormData();
   const payload = {
     formato: study.formato,
-    resultado: study.resultado,
+    resultado: study.conclusion || study.resultado,
     observacionesImagenologo: study.observaciones,
+    hallazgos: study.hallazgos,
+    recomendaciones: study.recomendaciones,
     tecnicoResponsable: study.tecnicoResponsable,
     hora: study.hora,
     archivo: study.archivo,

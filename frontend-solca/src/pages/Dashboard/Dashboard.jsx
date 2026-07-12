@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Card from "../../components/common/Card.jsx";
 import Button from "../../components/common/Button.jsx";
-import { ROUTES } from "../../utils/constants.js";
+import { HOSPITAL_BRANCHES, ROUTES } from "../../utils/constants.js";
 import { ROLE_PERMISSIONS, canAccess } from "../../utils/roles.js";
 import useAuth from "../../hooks/useAuth.js";
 import { searchPatients } from "../../services/patientService.js";
@@ -82,8 +82,9 @@ export default function Dashboard() {
 
   const patientsByBranch = metrics.patients.reduce((branches, patient) => {
     const branch = patient.sede || "Sin sede";
+    if (!HOSPITAL_BRANCHES.includes(branch)) return branches;
     return { ...branches, [branch]: (branches[branch] || 0) + 1 };
-  }, {});
+  }, Object.fromEntries(HOSPITAL_BRANCHES.map((branch) => [branch, 0])));
   const localHistoryCoverage = metrics.patients.filter((patient) => Array.isArray(patient.historiasLocales) && patient.historiasLocales.length > 0).length;
   const clinicalEvents = [...metrics.consultations, ...metrics.laboratories, ...metrics.imaging];
   const criticalAlerts = clinicalEvents.filter(hasCriticalSignal);
@@ -140,7 +141,7 @@ export default function Dashboard() {
           </div>
         </Card>
 
-        <Card title="Pacientes por sede" subtitle="Distribución operativa de la red SOLCA">
+        <Card title="Pacientes únicos por sede" subtitle="Conteo por sede administrativa registrada, sin duplicar por atenciones">
           <div className="branch-list">
             {Object.entries(patientsByBranch).length ? Object.entries(patientsByBranch).map(([branch, count]) => (
               <div className="branch-row" key={branch}>
