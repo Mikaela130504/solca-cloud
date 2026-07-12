@@ -37,8 +37,6 @@ const initialValues = {
 
 const resultInitial = {
   codigoMuestra: "",
-  tipoResultado: "Numérico",
-  resultado: "",
   parameters: [],
   interpretacion: "NORMAL",
   resultadoCritico: false,
@@ -172,13 +170,11 @@ export default function Laboratory() {
     const parameters = parseStoredParameters(order.valores, order.tipoExamen);
     setResult({
       codigoMuestra: order.codigoMuestra || `MUE-${String(order.id).padStart(6, "0")}`,
-      tipoResultado: order.tipoResultado || "Numérico",
-      resultado: order.resultado || "",
       parameters,
       interpretacion: order.interpretacion || (parameters.some((item) => item.indicator && item.indicator !== "NORMAL") ? "ANORMAL" : "NORMAL"),
       resultadoCritico: Boolean(order.resultadoCritico),
       tecnologoResponsable: order.tecnologoResponsable || user?.name || user?.username || "",
-      observaciones: order.observaciones || "",
+      observaciones: "",
     });
     if (canProcess && order.estado === "PENDIENTE") {
       await updateLaboratoryState(order.id, "EN_PROCESO");
@@ -194,7 +190,7 @@ export default function Laboratory() {
       await saveLaboratoryResult(activeOrder.id, {
         ...result,
         valores: JSON.stringify(result.parameters),
-        resultado: result.resultado || result.parameters.map((item) => `${item.name}: ${item.value || "Sin valor"} ${item.unit} (${item.indicator || "Sin indicador"})`).join("; "),
+        resultado: result.parameters.map((item) => `${item.name}: ${item.value || "Sin valor"} ${item.unit} (${item.indicator || "Sin indicador"})`).join("; "),
         cedula: activeOrder.cedula,
         idPacienteRegional: activeOrder.idPacienteRegional,
         fecha: activeOrder.fecha,
@@ -302,19 +298,25 @@ export default function Laboratory() {
         <Card title="Resultado de Laboratorio">
           <div className="grid grid-3 form-section">
             <div className="readonly-box"><strong>Paciente</strong><br />{activeOrder.idPacienteRegional || activeOrder.cedula}</div>
-            <div className="readonly-box"><strong>Médico solicitante</strong><br />{activeOrder.medico || "No registrado"}</div>
-            <div className="readonly-box"><strong>Especialidad</strong><br />{activeOrder.especialidad || "No registrada"}</div>
             <div className="readonly-box"><strong>Examen solicitado</strong><br />{activeOrder.tipoExamen}</div>
-            <div className="readonly-box"><strong>Prioridad</strong><br />{activeOrder.prioridad || "NORMAL"}</div>
-            <div className="readonly-box"><strong>Sede</strong><br />{activeOrder.sede}</div>
-            <div className="readonly-box"><strong>Fecha solicitud</strong><br />{activeOrder.fechaSolicitud ? String(activeOrder.fechaSolicitud).replace("T", " ").slice(0, 16) : activeOrder.fecha}</div>
-            <div className="readonly-box"><strong>Observaciones médicas</strong><br />{activeOrder.observaciones || "Sin observaciones"}</div>
             <div className="readonly-box"><strong>Estado</strong><br /><StatusBadge status={activeOrder.estado} /></div>
+          </div>
+          <div className="table-wrap form-section">
+            <table className="data-table">
+              <tbody>
+                <tr><th>Médico solicitante</th><td>{activeOrder.medico || "No registrado"}</td></tr>
+                <tr><th>Especialidad</th><td>{activeOrder.especialidad || "No registrada"}</td></tr>
+                <tr><th>Tipo de solicitud</th><td>{activeOrder.tipoConsulta || "Solicitud de laboratorio"}</td></tr>
+                <tr><th>Prioridad</th><td>{activeOrder.prioridad || "NORMAL"}</td></tr>
+                <tr><th>Sede</th><td>{activeOrder.sede}</td></tr>
+                <tr><th>Fecha solicitud</th><td>{activeOrder.fechaSolicitud ? String(activeOrder.fechaSolicitud).replace("T", " ").slice(0, 16) : activeOrder.fecha}</td></tr>
+                <tr><th>Observaciones del médico</th><td>{activeOrder.observaciones || "Sin observaciones"}</td></tr>
+              </tbody>
+            </table>
           </div>
           <form onSubmit={saveResult}>
             <div className="grid grid-3 form-section">
               <Input label="Código único de muestra" name="codigoMuestra" value={result.codigoMuestra} onChange={(event) => setResult((current) => ({ ...current, codigoMuestra: event.target.value }))} readOnly={!canProcess || activeOrder.estado === "VALIDADO"} />
-              <Select label="Tipo de resultado" name="tipoResultado" value={result.tipoResultado} onChange={(event) => setResult((current) => ({ ...current, tipoResultado: event.target.value }))} options={["Numérico", "Cualitativo", "Texto"]} disabled={!canProcess || activeOrder.estado === "VALIDADO"} />
               <Input label="Tecnólogo responsable" name="tecnologoResponsable" value={result.tecnologoResponsable} onChange={(event) => setResult((current) => ({ ...current, tecnologoResponsable: event.target.value }))} readOnly={!canProcess || activeOrder.estado === "VALIDADO"} />
             </div>
             <div className="table-wrap form-section">
@@ -346,9 +348,8 @@ export default function Laboratory() {
             <div className="grid grid-3 form-section">
               <Select label="Resultado crítico" name="resultadoCritico" value={result.resultadoCritico ? "Sí" : "No"} onChange={(event) => setResult((current) => ({ ...current, resultadoCritico: event.target.value === "Sí" }))} options={["No", "Sí"]} disabled={!canProcess || activeOrder.estado === "VALIDADO"} />
               <Input label="Interpretación del laboratorista" name="interpretacion" value={result.interpretacion} onChange={(event) => setResult((current) => ({ ...current, interpretacion: event.target.value }))} readOnly={!canProcess || activeOrder.estado === "VALIDADO"} />
-              <Input label="Resultado textual adicional" type="textarea" name="resultado" value={result.resultado} onChange={(event) => setResult((current) => ({ ...current, resultado: event.target.value }))} readOnly={!canProcess || activeOrder.estado === "VALIDADO"} />
             </div>
-            <Input label="Observaciones" type="textarea" name="observaciones" value={result.observaciones} onChange={(event) => setResult((current) => ({ ...current, observaciones: event.target.value }))} readOnly={!canProcess || activeOrder.estado === "VALIDADO"} />
+            <Input label="Observaciones del laboratorista" type="textarea" name="observaciones" value={result.observaciones} onChange={(event) => setResult((current) => ({ ...current, observaciones: event.target.value }))} readOnly={!canProcess || activeOrder.estado === "VALIDADO"} />
             <div className="actions">
               <Button type="button" variant="ghost" onClick={() => setActiveOrder(null)}>Cerrar</Button>
               {canProcess && activeOrder.estado !== "VALIDADO" && <Button type="submit" loading={saving}>Validar resultado</Button>}
