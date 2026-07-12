@@ -13,6 +13,7 @@ import useAuth from "../../hooks/useAuth.js";
 import useForm from "../../hooks/useForm.js";
 import { getApiErrorMessage } from "../../services/api.js";
 import { createLaboratoryOrder, listLaboratoryOrders, saveLaboratoryResult, updateLaboratoryState } from "../../services/laboratoryService.js";
+import { listConsultations } from "../../services/consultationService.js";
 import { HOSPITAL_BRANCHES, PRIORIDADES, TIPOS_LABORATORIO } from "../../utils/constants.js";
 import { toLocalDateInputValue } from "../../utils/helpers.js";
 import { calculateIndicator, getParametersForExam } from "../../utils/laboratoryCatalog.js";
@@ -30,6 +31,7 @@ const initialValues = {
   fecha: toLocalDateInputValue(),
   sede: "",
   medico: "",
+  especialidad: "",
   diagnosticoPresuntivo: "",
   cie10: "",
   observaciones: "",
@@ -63,13 +65,27 @@ function normalizeStatus(status) {
 }
 
 function parseStoredParameters(value, exam) {
+  const catalog = getParametersForExam(exam);
   try {
     const parsed = JSON.parse(value || "[]");
-    if (Array.isArray(parsed) && parsed.length) return parsed;
+    if (Array.isArray(parsed) && parsed.length) {
+      return parsed.map((item) => {
+        const catalogParameter = catalog.find((parameter) => parameter.name === item.name) || {};
+        const parameter = {
+          ...catalogParameter,
+          ...item,
+          value: item.value ?? item.valor ?? item.resultado ?? "",
+        };
+        return {
+          ...parameter,
+          indicator: item.indicator || item.indicador || calculateIndicator(parameter.value, parameter),
+        };
+      });
+    }
   } catch {
     // El registro anterior pudo guardar texto libre.
   }
-  return getParametersForExam(exam).map((parameter) => ({ ...parameter, value: "", indicator: "" }));
+  return catalog.map((parameter) => ({ ...parameter, value: "", indicator: "" }));
 }
 
 function buildLabInterpretation(parameters) {
@@ -78,6 +94,10 @@ function buildLabInterpretation(parameters) {
   return withValues.some((item) => item.indicator && item.indicator !== "NORMAL")
     ? "Se encontraron parámetros fuera del rango de referencia."
     : "Resultados dentro de parámetros normales.";
+}
+
+function hasParameterValues(parameters) {
+  return parameters.some((item) => item.value !== undefined && item.value !== null && String(item.value).trim() !== "");
 }
 
 export default function Laboratory() {
@@ -115,6 +135,7 @@ export default function Laboratory() {
       diagnosticoPresuntivo: stateDiagnosis?.enfermedad || current.diagnosticoPresuntivo,
       cie10: stateDiagnosis?.codigo || current.cie10,
       medico: location.state?.medico || user?.name || user?.username || current.medico,
+      especialidad: location.state?.especialidad || current.especialidad,
       sede: location.state?.sede || current.sede,
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -179,18 +200,29 @@ export default function Laboratory() {
   };
 
   const selectOrder = async (order) => {
-    setActiveOrder(order);
+    let hydratedOrder = order;
+    if (!order.especialidad && order.consultaId) {
+      try {
+        const consultations = await listConsultations();
+        const source = consultations.find((item) => Number(item.id) === Number(order.consultaId));
+        if (source?.especialidad) hydratedOrder = { ...order, especialidad: source.especialidad };
+      } catch {
+        hydratedOrder = order;
+      }
+    }
+    setActiveOrder(hydratedOrder);
     const parameters = parseStoredParameters(order.valores, order.tipoExamen);
+    const withValues = hasParameterValues(parameters);
     setResult({
-      codigoMuestra: order.codigoMuestra || `MUE-${String(order.id).padStart(6, "0")}`,
+      codigoMuestra: hydratedOrder.codigoMuestra || `MUE-${String(hydratedOrder.id).padStart(6, "0")}`,
       parameters,
-      interpretacion: order.interpretacion || buildLabInterpretation(parameters),
-      resultadoCritico: Boolean(order.resultadoCritico),
-      tecnologoResponsable: order.tecnologoResponsable || user?.name || user?.username || "",
-      observaciones: order.observacionesLaboratorio || "",
+      interpretacion: withValues ? (hydratedOrder.interpretacion || buildLabInterpretation(parameters)) : "",
+      resultadoCritico: Boolean(hydratedOrder.resultadoCritico),
+      tecnologoResponsable: hydratedOrder.tecnologoResponsable || user?.name || user?.username || "",
+      observaciones: hydratedOrder.observacionesLaboratorio || "",
     });
-    if (canProcess && order.estado === "PENDIENTE") {
-      await updateLaboratoryState(order.id, "EN_PROCESO");
+    if (canProcess && hydratedOrder.estado === "PENDIENTE") {
+      await updateLaboratoryState(hydratedOrder.id, "EN_PROCESO");
       await loadOrders();
     }
   };
@@ -212,7 +244,12 @@ export default function Laboratory() {
       });
       setToast({ message: "Resultado guardado correctamente.", type: "success" });
       setActiveOrder(saved);
-      setResult((current) => ({ ...current, observaciones: saved.observacionesLaboratorio || current.observaciones }));
+      setResult((current) => ({
+        ...current,
+        parameters: parseStoredParameters(saved.valores, saved.tipoExamen),
+        interpretacion: saved.interpretacion || current.interpretacion,
+        observaciones: saved.observacionesLaboratorio || current.observaciones,
+      }));
       await loadOrders();
     } catch (error) {
       setToast({ message: getApiErrorMessage(error, "No fue posible guardar el resultado."), type: "error" });

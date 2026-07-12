@@ -12,6 +12,7 @@ import useAuth from "../../hooks/useAuth.js";
 import useForm from "../../hooks/useForm.js";
 import { getApiErrorMessage } from "../../services/api.js";
 import { createImagingStudy, downloadImagingStudy, listAllImagingStudies, saveImagingResult } from "../../services/imagingService.js";
+import { listConsultations } from "../../services/consultationService.js";
 import { FORMATOS_IMAGEN, HOSPITAL_BRANCHES, PRIORIDADES, REGIONES_ANATOMICAS, TIPOS_ESTUDIO } from "../../utils/constants.js";
 import { toLocalDateInputValue } from "../../utils/helpers.js";
 import { ROLES } from "../../utils/roles.js";
@@ -30,6 +31,7 @@ const initialValues = {
   prioridad: "",
   sede: "",
   medico: "",
+  especialidad: "",
   indicacion: "",
 };
 
@@ -95,6 +97,7 @@ export default function Imaging() {
       cedula: patient?.cedula || current.cedula,
       paciente: patient ? `${patient.idPacienteRegional} - ${patient.nombres} ${patient.apellidos}` : current.paciente,
       medico: location.state?.medico || user?.name || user?.username || current.medico,
+      especialidad: location.state?.especialidad || current.especialidad,
       sede: location.state?.sede || current.sede,
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -149,16 +152,26 @@ export default function Imaging() {
   };
 
   const selectStudy = async (study) => {
-    setActiveStudy(study);
+    let hydratedStudy = study;
+    if (!study.especialidad && study.consultaId) {
+      try {
+        const consultations = await listConsultations();
+        const source = consultations.find((item) => Number(item.id) === Number(study.consultaId));
+        if (source?.especialidad) hydratedStudy = { ...study, especialidad: source.especialidad };
+      } catch {
+        hydratedStudy = study;
+      }
+    }
+    setActiveStudy(hydratedStudy);
     setFileName("");
     setResult({
-      formato: study.formato || "DICOM",
-      hallazgos: study.hallazgos || "",
-      conclusion: study.resultado || "",
-      observaciones: study.observacionesImagenologo || "",
-      recomendaciones: study.recomendaciones || "",
-      tecnicoResponsable: study.tecnicoResponsable || user?.name || user?.username || "",
-      hora: study.hora || new Date().toTimeString().slice(0, 5),
+      formato: hydratedStudy.formato || "DICOM",
+      hallazgos: hydratedStudy.hallazgos || "",
+      conclusion: hydratedStudy.resultado || "",
+      observaciones: hydratedStudy.observacionesImagenologo || "",
+      recomendaciones: hydratedStudy.recomendaciones || "",
+      tecnicoResponsable: hydratedStudy.tecnicoResponsable || user?.name || user?.username || "",
+      hora: hydratedStudy.hora || new Date().toTimeString().slice(0, 5),
       archivo: null,
     });
   };

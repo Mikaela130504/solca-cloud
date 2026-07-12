@@ -278,6 +278,7 @@ export default function ClinicalHistory() {
         patient: selectedPatient,
         diagnosis: primaryDiagnosis,
         medico: form.values.firmaMedico,
+        especialidad: form.values.especialidad,
         sede: form.values.sede,
       },
     });
