@@ -1,39 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
-import { useLocation } from "react-router-dom";
 import Button from "../../components/common/Button.jsx";
 import Card from "../../components/common/Card.jsx";
 import Input from "../../components/common/Input.jsx";
 import Loader from "../../components/common/Loader.jsx";
-import PatientAutocomplete from "../../components/common/PatientAutocomplete.jsx";
-import PatientIdentifiers from "../../components/common/PatientIdentifiers.jsx";
 import Select from "../../components/common/Select.jsx";
 import Toast from "../../components/common/Toast.jsx";
 import useAuth from "../../hooks/useAuth.js";
-import useForm from "../../hooks/useForm.js";
 import { getApiErrorMessage } from "../../services/api.js";
-import { createImagingStudy, downloadImagingStudy, listAllImagingStudies, saveImagingResult } from "../../services/imagingService.js";
+import { downloadImagingStudy, listAllImagingStudies, saveImagingResult } from "../../services/imagingService.js";
 import { listConsultations } from "../../services/consultationService.js";
-import { FORMATOS_IMAGEN, HOSPITAL_BRANCHES, PRIORIDADES, REGIONES_ANATOMICAS, TIPOS_ESTUDIO } from "../../utils/constants.js";
-import { toLocalDateInputValue } from "../../utils/helpers.js";
+import { FORMATOS_IMAGEN, HOSPITAL_BRANCHES } from "../../utils/constants.js";
 import { ROLES } from "../../utils/roles.js";
-import { required, rule } from "../../utils/validators.js";
 
 const ESTADOS_IMAGEN = ["SOLICITADO", "REALIZADO", "INFORMADO"];
-
-const initialValues = {
-  idPacienteRegional: "",
-  cedula: "",
-  paciente: "",
-  tipoEstudio: "",
-  regionAnatomica: "",
-  fecha: toLocalDateInputValue(),
-  formato: "",
-  prioridad: "",
-  sede: "",
-  medico: "",
-  especialidad: "",
-  indicacion: "",
-};
 
 const resultInitial = {
   formato: "",
@@ -46,17 +25,6 @@ const resultInitial = {
   archivo: null,
 };
 
-const rules = {
-  idPacienteRegional: [rule(required, "Seleccione un paciente registrado.")],
-  tipoEstudio: [rule(required, "Seleccione tipo de estudio.")],
-  regionAnatomica: [rule(required, "Seleccione región anatómica.")],
-  fecha: [rule(required, "Ingrese fecha.")],
-  formato: [rule(required, "Seleccione el formato.")],
-  prioridad: [rule(required, "Seleccione la prioridad.")],
-  sede: [rule(required, "Seleccione la sede.")],
-  medico: [rule(required, "El médico responsable es obligatorio.")],
-};
-
 function StatusBadge({ status }) {
   return <span className={`status-badge status-${(status || "SOLICITADO").toLowerCase()}`}>{status || "SOLICITADO"}</span>;
 }
@@ -66,13 +34,24 @@ function PriorityBadge({ priority }) {
   return <span className={`status-badge ${normalized === "URGENTE" ? "status-pendiente" : "status-en_proceso"}`}>{normalized}</span>;
 }
 
+function enrichWithConsultation(record, consultations = []) {
+  if (!record?.consultaId) return record;
+  const source = consultations.find((item) => Number(item.id) === Number(record.consultaId));
+  if (!source) return record;
+  return {
+    ...record,
+    sede: source.sede || record.sede,
+    medico: source.medico || record.medico,
+    especialidad: source.especialidad || record.especialidad,
+    tipoConsulta: source.tipoConsulta || record.tipoConsulta,
+    fecha: source.fecha || record.fecha,
+    diagnostico: source.diagnostico || record.diagnostico,
+  };
+}
+
 export default function Imaging() {
-  const form = useForm(initialValues, rules);
   const { user } = useAuth();
-  const location = useLocation();
   const canProcess = user?.role === ROLES.admin || user?.role === ROLES.imagenologia;
-  const canRequest = user?.role === ROLES.admin || user?.role === ROLES.medico;
-  const [selectedPatient, setSelectedPatient] = useState(null);
   const [studies, setStudies] = useState([]);
   const [activeStudy, setActiveStudy] = useState(null);
   const [filters, setFilters] = useState({ estado: "", sede: "", paciente: "" });
@@ -88,26 +67,15 @@ export default function Imaging() {
     (!filters.paciente || `${study.idPacienteRegional} ${study.cedula}`.toLowerCase().includes(filters.paciente.toLowerCase()))
   )), [studies, filters]);
 
-  useEffect(() => {
-    const patient = location.state?.patient;
-    setSelectedPatient(patient || null);
-    form.setValues((current) => ({
-      ...current,
-      idPacienteRegional: patient?.idPacienteRegional || current.idPacienteRegional,
-      cedula: patient?.cedula || current.cedula,
-      paciente: patient ? `${patient.idPacienteRegional} - ${patient.nombres} ${patient.apellidos}` : current.paciente,
-      medico: location.state?.medico || user?.name || user?.username || current.medico,
-      especialidad: location.state?.especialidad || current.especialidad,
-      sede: location.state?.sede || current.sede,
-    }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.state, user]);
-
   const loadStudies = async () => {
     setLoading(true);
     try {
-      const data = await listAllImagingStudies();
-      setStudies(Array.isArray(data) ? data : []);
+      const [data, consultations] = await Promise.all([
+        listAllImagingStudies(),
+        listConsultations().catch(() => []),
+      ]);
+      const rows = Array.isArray(data) ? data : [];
+      setStudies(rows.map((item) => enrichWithConsultation(item, consultations)));
     } catch (error) {
       setToast({ message: getApiErrorMessage(error, "No fue posible cargar imagenología."), type: "error" });
     } finally {
@@ -120,44 +88,12 @@ export default function Imaging() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handlePatientSelect = (patient) => {
-    setSelectedPatient(patient);
-    form.setValues((current) => ({
-      ...current,
-      idPacienteRegional: patient?.idPacienteRegional || "",
-      cedula: patient?.cedula || "",
-      paciente: patient ? `${patient.idPacienteRegional} - ${patient.nombres} ${patient.apellidos}` : "",
-    }));
-  };
-
-  const createRequest = async (event) => {
-    event.preventDefault();
-    if (!canRequest || !form.validate()) return;
-    setSaving(true);
-    try {
-      await createImagingStudy({
-        ...form.values,
-        estado: "SOLICITADO",
-        observaciones: `Indicación: ${form.values.indicacion || "N/A"}`,
-      });
-      setToast({ message: "Solicitud de imagenología registrada como SOLICITADO.", type: "success" });
-      form.reset();
-      setSelectedPatient(null);
-      await loadStudies();
-    } catch (error) {
-      setToast({ message: getApiErrorMessage(error, "No fue posible registrar imagenología."), type: "error" });
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const selectStudy = async (study) => {
     let hydratedStudy = study;
-    if (!study.especialidad && study.consultaId) {
+    if (study.consultaId) {
       try {
         const consultations = await listConsultations();
-        const source = consultations.find((item) => Number(item.id) === Number(study.consultaId));
-        if (source?.especialidad) hydratedStudy = { ...study, especialidad: source.especialidad };
+        hydratedStudy = enrichWithConsultation(study, consultations);
       } catch {
         hydratedStudy = study;
       }
@@ -222,29 +158,6 @@ export default function Imaging() {
         </div>
         <Button variant="secondary" onClick={loadStudies}>Actualizar</Button>
       </div>
-
-      {canRequest && (
-        <Card title="Nueva solicitud de estudio">
-          <form onSubmit={createRequest} noValidate>
-            <div className="grid grid-3 form-section">
-              <PatientAutocomplete selectedPatient={selectedPatient} onSelect={handlePatientSelect} error={form.errors.idPacienteRegional} />
-              <Input label="Paciente seleccionado" name="paciente" value={form.values.paciente} readOnly />
-              <PatientIdentifiers patient={selectedPatient} />
-              <Select label="Tipo de estudio *" name="tipoEstudio" value={form.values.tipoEstudio} onChange={form.handleChange} error={form.errors.tipoEstudio} options={TIPOS_ESTUDIO} />
-              <Select label="Región anatómica *" name="regionAnatomica" value={form.values.regionAnatomica} onChange={form.handleChange} error={form.errors.regionAnatomica} options={REGIONES_ANATOMICAS} />
-              <Input label="Fecha *" type="date" name="fecha" value={form.values.fecha} readOnly error={form.errors.fecha} />
-              <Select label="Formato esperado *" name="formato" value={form.values.formato} onChange={form.handleChange} error={form.errors.formato} options={FORMATOS_IMAGEN} />
-              <Select label="Prioridad *" name="prioridad" value={form.values.prioridad} onChange={form.handleChange} error={form.errors.prioridad} options={PRIORIDADES} />
-              <Select label="Sede *" name="sede" value={form.values.sede} onChange={form.handleChange} error={form.errors.sede} options={HOSPITAL_BRANCHES} />
-              <Input label="Médico solicitante" name="medico" value={form.values.medico} readOnly error={form.errors.medico} />
-            </div>
-            <Input label="Observaciones del médico (opcional)" type="textarea" name="indicacion" value={form.values.indicacion} onChange={form.handleChange} />
-            <div className="actions">
-              <Button type="submit" loading={saving}>Enviar solicitud</Button>
-            </div>
-          </form>
-        </Card>
-      )}
 
       <Card title="Bandeja PACS">
         <div className="grid grid-3 form-section">

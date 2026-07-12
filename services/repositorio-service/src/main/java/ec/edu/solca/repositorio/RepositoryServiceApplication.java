@@ -70,9 +70,12 @@ class RepositorioService {
     String idRegional = paciente;
     if (pacienteDto instanceof Map<?,?> map && map.get("idPacienteRegional") != null) idRegional = String.valueOf(map.get("idPacienteRegional"));
     respuesta.put("paciente", pacienteDto);
-    respuesta.put("consultas", llamar(consultas + "/consultas/paciente/" + idRegional, authorization, noDisponibles, "Consulta Clínica", List.of()));
-    respuesta.put("laboratorios", llamar(laboratorios + "/laboratorios/paciente/" + idRegional, authorization, noDisponibles, "Laboratorio Clínico", List.of()));
-    respuesta.put("imagenologia", llamar(imagenologia + "/imagenologia/paciente/" + idRegional, authorization, noDisponibles, "Imagenología", List.of()));
+    Object consultasPaciente = llamar(consultas + "/consultas/paciente/" + idRegional, authorization, noDisponibles, "Consulta Clínica", List.of());
+    Object laboratoriosPaciente = llamar(laboratorios + "/laboratorios/paciente/" + idRegional, authorization, noDisponibles, "Laboratorio Clínico", List.of());
+    Object imagenologiaPaciente = llamar(imagenologia + "/imagenologia/paciente/" + idRegional, authorization, noDisponibles, "Imagenología", List.of());
+    respuesta.put("consultas", consultasPaciente);
+    respuesta.put("laboratorios", consolidarConConsulta(laboratoriosPaciente, consultasPaciente));
+    respuesta.put("imagenologia", consolidarConConsulta(imagenologiaPaciente, consultasPaciente));
     respuesta.put("serviciosNoDisponibles", noDisponibles);
     guardarHistorial(paciente, idRegional, noDisponibles, http);
     guardarCache(idRegional, respuesta);
@@ -105,6 +108,47 @@ class RepositorioService {
       registrarServicio(nombre, "NO_DISPONIBLE", url, "ERROR", System.currentTimeMillis() - inicio, ex.getMessage());
       return fallback;
     }
+  }
+
+  Object consolidarConConsulta(Object registros, Object consultasPaciente) {
+    if (!(registros instanceof List<?> rows) || !(consultasPaciente instanceof List<?> consultasRows)) return registros;
+    Map<Long, Map<String,Object>> consultasPorId = new HashMap<>();
+    for (Object item : consultasRows) {
+      if (item instanceof Map<?,?> map && map.get("id") != null) {
+        try {
+          Map<String,Object> consulta = new LinkedHashMap<>();
+          map.forEach((key, value) -> consulta.put(String.valueOf(key), value));
+          consultasPorId.put(Long.valueOf(String.valueOf(map.get("id"))), consulta);
+        } catch (NumberFormatException ignored) {}
+      }
+    }
+    List<Map<String,Object>> salida = new ArrayList<>();
+    for (Object item : rows) {
+      if (!(item instanceof Map<?,?> map)) continue;
+      Map<String,Object> row = new LinkedHashMap<>();
+      map.forEach((key, value) -> row.put(String.valueOf(key), value));
+      Object consultaId = row.get("consultaId");
+      if (consultaId != null) {
+        try {
+          Map<String,Object> consulta = consultasPorId.get(Long.valueOf(String.valueOf(consultaId)));
+          if (consulta != null) {
+            heredar(row, consulta, "sede");
+            heredar(row, consulta, "medico");
+            heredar(row, consulta, "especialidad");
+            heredar(row, consulta, "tipoConsulta");
+            heredar(row, consulta, "fecha");
+            heredar(row, consulta, "diagnostico");
+          }
+        } catch (NumberFormatException ignored) {}
+      }
+      salida.add(row);
+    }
+    return salida;
+  }
+
+  void heredar(Map<String,Object> destino, Map<String,Object> consulta, String campo) {
+    Object value = consulta.get(campo);
+    if (value != null && !String.valueOf(value).isBlank()) destino.put(campo, value);
   }
 
   List<Map<String,Object>> auditorias(String authorization) {

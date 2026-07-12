@@ -68,6 +68,16 @@ export default function PatientMaster() {
     form.setValues((current) => ({ ...current, [name]: digits }));
   };
 
+  const handleTelefonoChange = (event) => {
+    const digits = event.target.value.replace(/\D/g, "").slice(0, 10);
+    form.setValues((current) => ({ ...current, telefono: digits }));
+  };
+
+  const handleEmergenciaChange = (event) => {
+    const digits = event.target.value.replace(/\D/g, "").slice(0, 10);
+    form.setValues((current) => ({ ...current, contactoEmergencia: digits }));
+  };
+
   const handleProvinceChange = (event) => {
     const provincia = event.target.value;
     form.setValues((current) => ({ ...current, provincia, ciudad: "" }));
@@ -173,9 +183,9 @@ export default function PatientMaster() {
               <Input label="Dirección *" name="direccion" value={form.values.direccion} onChange={form.handleChange} error={form.errors.direccion} />
               <Select label="Provincia *" name="provincia" value={form.values.provincia} onChange={handleProvinceChange} error={form.errors.provincia} options={ECUADOR_PROVINCES} />
               <Select label="Ciudad *" name="ciudad" value={form.values.ciudad} onChange={form.handleChange} error={form.errors.ciudad} options={cityOptions} disabled={!form.values.provincia} />
-              <Input label="Teléfono *" name="telefono" value={form.values.telefono} onChange={handleDigits} error={form.errors.telefono} maxLength="10" inputMode="numeric" autoComplete="tel-national" />
+              <Input label="Teléfono *" name="telefono" value={form.values.telefono} onChange={handleTelefonoChange} error={form.errors.telefono} maxLength="10" inputMode="numeric" autoComplete="tel-national" />
               <Input label="Correo *" type="email" name="correo" value={form.values.correo} onChange={form.handleChange} error={form.errors.correo} />
-              <Input label="Teléfono de emergencia *" name="contactoEmergencia" value={form.values.contactoEmergencia} onChange={handleDigits} error={form.errors.contactoEmergencia} maxLength="10" inputMode="numeric" autoComplete="off" />
+              <Input label="Teléfono de emergencia *" name="contactoEmergencia" value={form.values.contactoEmergencia} onChange={handleEmergenciaChange} error={form.errors.contactoEmergencia} maxLength="10" inputMode="numeric" autoComplete="off" />
             </div>
           </div>
 

@@ -1,41 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
-import { useLocation } from "react-router-dom";
 import Button from "../../components/common/Button.jsx";
 import Card from "../../components/common/Card.jsx";
-import DiagnosisAutocomplete from "../../components/common/DiagnosisAutocomplete.jsx";
 import Input from "../../components/common/Input.jsx";
 import Loader from "../../components/common/Loader.jsx";
-import PatientAutocomplete from "../../components/common/PatientAutocomplete.jsx";
-import PatientIdentifiers from "../../components/common/PatientIdentifiers.jsx";
 import Select from "../../components/common/Select.jsx";
 import Toast from "../../components/common/Toast.jsx";
 import useAuth from "../../hooks/useAuth.js";
-import useForm from "../../hooks/useForm.js";
 import { getApiErrorMessage } from "../../services/api.js";
-import { createLaboratoryOrder, listLaboratoryOrders, saveLaboratoryResult, updateLaboratoryState } from "../../services/laboratoryService.js";
+import { listLaboratoryOrders, saveLaboratoryResult, updateLaboratoryState } from "../../services/laboratoryService.js";
 import { listConsultations } from "../../services/consultationService.js";
-import { HOSPITAL_BRANCHES, PRIORIDADES, TIPOS_LABORATORIO } from "../../utils/constants.js";
-import { toLocalDateInputValue } from "../../utils/helpers.js";
+import { HOSPITAL_BRANCHES } from "../../utils/constants.js";
 import { calculateIndicator, getParametersForExam } from "../../utils/laboratoryCatalog.js";
 import { ROLES } from "../../utils/roles.js";
-import { isNotFutureDate, required, rule } from "../../utils/validators.js";
 
 const ESTADOS_LAB = ["PENDIENTE", "EN_PROCESO", "FINALIZADO"];
-
-const initialValues = {
-  idPacienteRegional: "",
-  cedula: "",
-  paciente: "",
-  tipoExamen: "",
-  prioridad: "",
-  fecha: toLocalDateInputValue(),
-  sede: "",
-  medico: "",
-  especialidad: "",
-  diagnosticoPresuntivo: "",
-  cie10: "",
-  observaciones: "",
-};
 
 const resultInitial = {
   codigoMuestra: "",
@@ -44,15 +22,6 @@ const resultInitial = {
   resultadoCritico: false,
   tecnologoResponsable: "",
   observaciones: "",
-};
-
-const rules = {
-  idPacienteRegional: [rule(required, "Seleccione un paciente registrado.")],
-  tipoExamen: [rule(required, "Seleccione el tipo de examen.")],
-  fecha: [rule(required, "Ingrese fecha."), rule(isNotFutureDate, "La fecha debe ser válida.")],
-  sede: [rule(required, "Seleccione la sede.")],
-  medico: [rule(required, "El médico solicitante es obligatorio.")],
-  diagnosticoPresuntivo: [rule(required, "Seleccione diagnóstico presuntivo CIE-10.")],
 };
 
 function StatusBadge({ status }) {
@@ -100,14 +69,24 @@ function hasParameterValues(parameters) {
   return parameters.some((item) => item.value !== undefined && item.value !== null && String(item.value).trim() !== "");
 }
 
+function enrichWithConsultation(record, consultations = []) {
+  if (!record?.consultaId) return record;
+  const source = consultations.find((item) => Number(item.id) === Number(record.consultaId));
+  if (!source) return record;
+  return {
+    ...record,
+    sede: source.sede || record.sede,
+    medico: source.medico || record.medico,
+    especialidad: source.especialidad || record.especialidad,
+    tipoConsulta: source.tipoConsulta || record.tipoConsulta,
+    fecha: source.fecha || record.fecha,
+    diagnostico: source.diagnostico || record.diagnostico,
+  };
+}
+
 export default function Laboratory() {
-  const form = useForm(initialValues, rules);
   const { user } = useAuth();
-  const location = useLocation();
   const canProcess = user?.role === ROLES.admin || user?.role === ROLES.laboratorio;
-  const canRequest = user?.role === ROLES.admin || user?.role === ROLES.medico;
-  const [selectedPatient, setSelectedPatient] = useState(null);
-  const [diagnosis, setDiagnosis] = useState(null);
   const [orders, setOrders] = useState([]);
   const [activeOrder, setActiveOrder] = useState(null);
   const [filters, setFilters] = useState({ estado: "", sede: "", paciente: "" });
@@ -122,30 +101,15 @@ export default function Laboratory() {
     (!filters.paciente || `${order.idPacienteRegional} ${order.cedula}`.toLowerCase().includes(filters.paciente.toLowerCase()))
   )), [orders, filters]);
 
-  useEffect(() => {
-    const patient = location.state?.patient;
-    const stateDiagnosis = location.state?.diagnosis;
-    setSelectedPatient(patient || null);
-    setDiagnosis(stateDiagnosis || null);
-    form.setValues((current) => ({
-      ...current,
-      idPacienteRegional: patient?.idPacienteRegional || current.idPacienteRegional,
-      cedula: patient?.cedula || current.cedula,
-      paciente: patient ? `${patient.idPacienteRegional} - ${patient.nombres} ${patient.apellidos}` : current.paciente,
-      diagnosticoPresuntivo: stateDiagnosis?.enfermedad || current.diagnosticoPresuntivo,
-      cie10: stateDiagnosis?.codigo || current.cie10,
-      medico: location.state?.medico || user?.name || user?.username || current.medico,
-      especialidad: location.state?.especialidad || current.especialidad,
-      sede: location.state?.sede || current.sede,
-    }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.state, user]);
-
   const loadOrders = async () => {
     setLoading(true);
     try {
-      const data = await listLaboratoryOrders();
-      setOrders(Array.isArray(data) ? data : []);
+      const [data, consultations] = await Promise.all([
+        listLaboratoryOrders(),
+        listConsultations().catch(() => []),
+      ]);
+      const rows = Array.isArray(data) ? data : [];
+      setOrders(rows.map((item) => enrichWithConsultation(item, consultations)));
     } catch (error) {
       setToast({ message: getApiErrorMessage(error, "No fue posible cargar laboratorio."), type: "error" });
     } finally {
@@ -158,54 +122,12 @@ export default function Laboratory() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handlePatientSelect = (patient) => {
-    setSelectedPatient(patient);
-    form.setValues((current) => ({
-      ...current,
-      idPacienteRegional: patient?.idPacienteRegional || "",
-      cedula: patient?.cedula || "",
-      paciente: patient ? `${patient.idPacienteRegional} - ${patient.nombres} ${patient.apellidos}` : "",
-    }));
-  };
-
-  const handleDiagnosis = (item) => {
-    setDiagnosis(item);
-    form.setValues((current) => ({
-      ...current,
-      diagnosticoPresuntivo: item ? item.enfermedad : "",
-      cie10: item ? item.codigo : "",
-    }));
-  };
-
-  const createOrder = async (event) => {
-    event.preventDefault();
-    if (!canRequest || !form.validate()) return;
-    setSaving(true);
-    try {
-      await createLaboratoryOrder({
-        ...form.values,
-        estado: "PENDIENTE",
-        diagnostico: `${form.values.cie10} - ${form.values.diagnosticoPresuntivo}`,
-      });
-      setToast({ message: "Solicitud de laboratorio registrada como PENDIENTE.", type: "success" });
-      form.reset();
-      setSelectedPatient(null);
-      setDiagnosis(null);
-      await loadOrders();
-    } catch (error) {
-      setToast({ message: getApiErrorMessage(error, "No fue posible registrar laboratorio."), type: "error" });
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const selectOrder = async (order) => {
     let hydratedOrder = order;
-    if (!order.especialidad && order.consultaId) {
+    if (order.consultaId) {
       try {
         const consultations = await listConsultations();
-        const source = consultations.find((item) => Number(item.id) === Number(order.consultaId));
-        if (source?.especialidad) hydratedOrder = { ...order, especialidad: source.especialidad };
+        hydratedOrder = enrichWithConsultation(order, consultations);
       } catch {
         hydratedOrder = order;
       }
@@ -281,28 +203,6 @@ export default function Laboratory() {
         </div>
         <Button variant="secondary" onClick={loadOrders}>Actualizar</Button>
       </div>
-
-      {canRequest && (
-        <Card title="Nueva solicitud">
-          <form onSubmit={createOrder} noValidate>
-            <div className="grid grid-3 form-section">
-              <PatientAutocomplete selectedPatient={selectedPatient} onSelect={handlePatientSelect} error={form.errors.idPacienteRegional} />
-              <Input label="Paciente seleccionado" name="paciente" value={form.values.paciente} readOnly />
-              <PatientIdentifiers patient={selectedPatient} />
-              <Select label="Tipo de examen" name="tipoExamen" value={form.values.tipoExamen} onChange={form.handleChange} error={form.errors.tipoExamen} options={TIPOS_LABORATORIO} />
-              <Select label="Prioridad" name="prioridad" value={form.values.prioridad} onChange={form.handleChange} options={PRIORIDADES} />
-              <Input label="Fecha de solicitud" type="date" name="fecha" value={form.values.fecha} onChange={form.handleChange} error={form.errors.fecha} />
-              <Select label="Sede" name="sede" value={form.values.sede} onChange={form.handleChange} error={form.errors.sede} options={HOSPITAL_BRANCHES} />
-              <Input label="Médico solicitante" name="medico" value={form.values.medico} readOnly error={form.errors.medico} />
-              <DiagnosisAutocomplete label="Diagnóstico presuntivo CIE-10" selected={diagnosis} onSelect={handleDiagnosis} error={form.errors.diagnosticoPresuntivo} />
-            </div>
-            <Input label="Observaciones de solicitud" type="textarea" name="observaciones" value={form.values.observaciones} onChange={form.handleChange} />
-            <div className="actions">
-              <Button type="submit" loading={saving}>Enviar solicitud</Button>
-            </div>
-          </form>
-        </Card>
-      )}
 
       <Card title="Bandeja de laboratorio">
         <div className="grid grid-3 form-section">
