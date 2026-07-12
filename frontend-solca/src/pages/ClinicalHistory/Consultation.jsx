@@ -12,7 +12,9 @@ import useAuth from "../../hooks/useAuth.js";
 import useForm from "../../hooks/useForm.js";
 import { getApiErrorMessage } from "../../services/api.js";
 import { createConsultation } from "../../services/consultationService.js";
-import { ESPECIALIDADES_MEDICAS, HOSPITAL_BRANCHES, TIPOS_CONSULTA } from "../../utils/constants.js";
+import { createImagingStudy } from "../../services/imagingService.js";
+import { createLaboratoryOrder } from "../../services/laboratoryService.js";
+import { ESPECIALIDADES_MEDICAS, HOSPITAL_BRANCHES, PRIORIDADES, REGIONES_ANATOMICAS, TIPOS_CONSULTA, TIPOS_ESTUDIO, TIPOS_LABORATORIO } from "../../utils/constants.js";
 import { calculateImc, toLocalDateInputValue } from "../../utils/helpers.js";
 import { isNotFutureDate, required, rule } from "../../utils/validators.js";
 
@@ -30,7 +32,7 @@ const initialValues = {
   idPacienteRegional: "",
   cedula: "",
   paciente: "",
-  especialidad: "Oncología clínica",
+  especialidad: "",
   tipoConsulta: "",
   sede: "",
   fecha: today(),
@@ -51,6 +53,15 @@ const initialValues = {
   medicacion: "",
   proximoControl: "",
   medico: "",
+  solicitaLaboratorio: false,
+  tipoExamenLaboratorio: "",
+  prioridadLaboratorio: "",
+  observacionesLaboratorio: "",
+  solicitaImagenologia: false,
+  tipoEstudioImagen: "",
+  regionAnatomica: "",
+  prioridadImagen: "",
+  observacionesImagenologia: "",
 };
 
 const rules = {
@@ -59,13 +70,28 @@ const rules = {
   fecha: [rule(required, "Ingrese fecha."), rule(isNotFutureDate, "La fecha no puede ser futura.")],
   hora: [rule(required, "Ingrese hora.")],
   motivo: [rule(required, "Ingrese motivo de consulta.")],
+  especialidad: [rule(required, "Seleccione especialidad.")],
   tipoConsulta: [rule(required, "Seleccione el tipo de consulta.")],
   evolucion: [rule(required, "Ingrese evolución clínica.")],
   diagnostico: [rule(required, "Seleccione diagnóstico CIE-10.")],
   cie10: [rule(required, "Seleccione CIE10.")],
   medico: [rule(required, "El médico responsable es obligatorio.")],
   proximoControl: [rule(isFutureOrToday, "El próximo control no puede ser una fecha pasada.")],
+  tipoExamenLaboratorio: [rule((value, values) => !values.solicitaLaboratorio || required(value), "Seleccione el examen de laboratorio.")],
+  prioridadLaboratorio: [rule((value, values) => !values.solicitaLaboratorio || required(value), "Seleccione la prioridad de laboratorio.")],
+  tipoEstudioImagen: [rule((value, values) => !values.solicitaImagenologia || required(value), "Seleccione el estudio de imagenología.")],
+  regionAnatomica: [rule((value, values) => !values.solicitaImagenologia || required(value), "Seleccione región anatómica.")],
+  prioridadImagen: [rule((value, values) => !values.solicitaImagenologia || required(value), "Seleccione la prioridad de imagenología.")],
 };
+
+function CheckField({ name, label, checked, onChange }) {
+  return (
+    <label className="check-field">
+      <input type="checkbox" name={name} checked={checked} onChange={onChange} />
+      <span>{label}</span>
+    </label>
+  );
+}
 
 export default function Consultation() {
   const form = useForm(initialValues, rules);
@@ -130,13 +156,49 @@ export default function Consultation() {
     if (!form.validate()) return;
     setSaving(true);
     try {
+      const diagnosticoTexto = `${form.values.cie10} - ${form.values.diagnostico}`;
       await createConsultation({
         ...form.values,
-        diagnostico: `${form.values.cie10} - ${form.values.diagnostico}`,
+        diagnostico: diagnosticoTexto,
         tratamiento: form.values.plan,
         observaciones: `Medicación: ${form.values.medicacion || "N/A"}\nPróximo control: ${form.values.proximoControl || "N/A"}\nSignos vitales: Peso ${form.values.peso || "N/A"} kg; Talla ${form.values.talla || "N/A"} cm; IMC ${form.values.imc || "N/A"}; Temperatura ${form.values.temperatura || "N/A"}; PA ${form.values.presionArterial || "N/A"}; FC ${form.values.frecuenciaCardiaca || "N/A"}; FR ${form.values.frecuenciaRespiratoria || "N/A"}; Saturación ${form.values.saturacion || "N/A"}.`,
       });
-      setToast({ message: "Consulta registrada correctamente.", type: "success" });
+      const requests = [];
+      if (form.values.solicitaLaboratorio) {
+        requests.push(createLaboratoryOrder({
+          cedula: form.values.cedula,
+          idPacienteRegional: form.values.idPacienteRegional,
+          fecha: form.values.fecha,
+          sede: form.values.sede,
+          medico: form.values.medico,
+          especialidad: form.values.especialidad,
+          tipoConsulta: form.values.tipoConsulta,
+          diagnostico: diagnosticoTexto,
+          tipoExamen: form.values.tipoExamenLaboratorio,
+          prioridad: form.values.prioridadLaboratorio,
+          observaciones: form.values.observacionesLaboratorio || `Solicitud generada desde consulta: ${form.values.motivo}`,
+          estado: "PENDIENTE",
+        }));
+      }
+      if (form.values.solicitaImagenologia) {
+        requests.push(createImagingStudy({
+          cedula: form.values.cedula,
+          idPacienteRegional: form.values.idPacienteRegional,
+          fecha: form.values.fecha,
+          sede: form.values.sede,
+          medico: form.values.medico,
+          especialidad: form.values.especialidad,
+          tipoConsulta: form.values.tipoConsulta,
+          diagnostico: diagnosticoTexto,
+          tipoEstudio: form.values.tipoEstudioImagen,
+          regionAnatomica: form.values.regionAnatomica,
+          prioridad: form.values.prioridadImagen,
+          observaciones: form.values.observacionesImagenologia || `Solicitud generada desde consulta: ${form.values.motivo}`,
+          estado: "SOLICITADO",
+        }));
+      }
+      if (requests.length) await Promise.all(requests);
+      setToast({ message: requests.length ? "Consulta y solicitudes registradas correctamente." : "Consulta registrada correctamente.", type: "success" });
     } catch (error) {
       setToast({ message: getApiErrorMessage(error, "No fue posible registrar la consulta."), type: "error" });
     } finally {
@@ -159,7 +221,7 @@ export default function Consultation() {
             <PatientAutocomplete selectedPatient={selectedPatient} onSelect={handlePatientSelect} error={form.errors.idPacienteRegional} />
             <Input label="Paciente seleccionado" name="paciente" value={form.values.paciente} readOnly />
             <PatientIdentifiers patient={selectedPatient} />
-            <Select label="Especialidad" name="especialidad" value={form.values.especialidad} onChange={form.handleChange} options={ESPECIALIDADES_MEDICAS} />
+            <Select label="Especialidad *" name="especialidad" value={form.values.especialidad} onChange={form.handleChange} error={form.errors.especialidad} options={ESPECIALIDADES_MEDICAS} />
             <Select label="Tipo de consulta" name="tipoConsulta" value={form.values.tipoConsulta} onChange={form.handleChange} error={form.errors.tipoConsulta} options={TIPOS_CONSULTA} />
             <Select label="Sede" name="sede" value={form.values.sede} onChange={form.handleChange} error={form.errors.sede} options={HOSPITAL_BRANCHES} />
             <Input label="Fecha" type="date" name="fecha" value={form.values.fecha} readOnly error={form.errors.fecha} />
@@ -175,14 +237,14 @@ export default function Consultation() {
           <div className="form-section">
             <div className="form-section-title">Signos vitales</div>
             <div className="grid grid-4">
-              <Input label="Peso kg" name="peso" type="number" min="0" value={form.values.peso} onChange={form.handleChange} />
-              <Input label="Talla cm" name="talla" type="number" min="0" value={form.values.talla} onChange={form.handleChange} />
-              <Input label="IMC" name="imc" value={form.values.imc} onChange={form.handleChange} readOnly />
-              <Input label="Temperatura C" name="temperatura" type="number" min="0" step="0.1" value={form.values.temperatura} onChange={form.handleChange} />
-              <Input label="Presión arterial" name="presionArterial" value={form.values.presionArterial} onChange={form.handleChange} placeholder="120/80" />
-              <Input label="Frecuencia cardíaca" name="frecuenciaCardiaca" type="number" min="0" value={form.values.frecuenciaCardiaca} onChange={form.handleChange} />
-              <Input label="Frecuencia respiratoria" name="frecuenciaRespiratoria" type="number" min="0" value={form.values.frecuenciaRespiratoria} onChange={form.handleChange} />
-              <Input label="Saturación" name="saturacion" type="number" min="0" max="100" value={form.values.saturacion} onChange={form.handleChange} />
+              <Input label="Peso kg (opcional)" name="peso" type="number" min="0" value={form.values.peso} onChange={form.handleChange} placeholder="70" />
+              <Input label="Talla cm (opcional)" name="talla" type="number" min="0" value={form.values.talla} onChange={form.handleChange} placeholder="161" />
+              <Input label="IMC (opcional)" name="imc" value={form.values.imc} onChange={form.handleChange} readOnly placeholder="22.5" />
+              <Input label="Temperatura C (opcional)" name="temperatura" type="number" min="0" step="0.1" value={form.values.temperatura} onChange={form.handleChange} placeholder="36.5" />
+              <Input label="Presión arterial (opcional)" name="presionArterial" value={form.values.presionArterial} onChange={form.handleChange} placeholder="120/80" />
+              <Input label="Frecuencia cardíaca (opcional)" name="frecuenciaCardiaca" type="number" min="0" value={form.values.frecuenciaCardiaca} onChange={form.handleChange} placeholder="72" />
+              <Input label="Frecuencia respiratoria (opcional)" name="frecuenciaRespiratoria" type="number" min="0" value={form.values.frecuenciaRespiratoria} onChange={form.handleChange} placeholder="18" />
+              <Input label="Saturación (opcional)" name="saturacion" type="number" min="0" max="100" value={form.values.saturacion} onChange={form.handleChange} placeholder="98" />
             </div>
           </div>
 
@@ -191,6 +253,29 @@ export default function Consultation() {
             <Input label="Próximo control" type="date" name="proximoControl" value={form.values.proximoControl} onChange={form.handleChange} error={form.errors.proximoControl} />
             <Input label="Plan" type="textarea" name="plan" value={form.values.plan} onChange={form.handleChange} />
             <Input label="Medicación" type="textarea" name="medicacion" value={form.values.medicacion} onChange={form.handleChange} />
+          </div>
+
+          <div className="form-section">
+            <div className="form-section-title">Solicitudes generadas desde la consulta</div>
+            <div className="checkbox-grid">
+              <CheckField name="solicitaLaboratorio" label="Solicitar laboratorio" checked={form.values.solicitaLaboratorio} onChange={form.handleChange} />
+              <CheckField name="solicitaImagenologia" label="Solicitar imagenología" checked={form.values.solicitaImagenologia} onChange={form.handleChange} />
+            </div>
+            {form.values.solicitaLaboratorio && (
+              <div className="grid grid-3">
+                <Select label="Examen de laboratorio *" name="tipoExamenLaboratorio" value={form.values.tipoExamenLaboratorio} onChange={form.handleChange} error={form.errors.tipoExamenLaboratorio} options={TIPOS_LABORATORIO} />
+                <Select label="Prioridad laboratorio *" name="prioridadLaboratorio" value={form.values.prioridadLaboratorio} onChange={form.handleChange} error={form.errors.prioridadLaboratorio} options={PRIORIDADES} />
+                <Input label="Observaciones para laboratorio (opcional)" name="observacionesLaboratorio" value={form.values.observacionesLaboratorio} onChange={form.handleChange} />
+              </div>
+            )}
+            {form.values.solicitaImagenologia && (
+              <div className="grid grid-3">
+                <Select label="Estudio de imagenología *" name="tipoEstudioImagen" value={form.values.tipoEstudioImagen} onChange={form.handleChange} error={form.errors.tipoEstudioImagen} options={TIPOS_ESTUDIO} />
+                <Select label="Región anatómica *" name="regionAnatomica" value={form.values.regionAnatomica} onChange={form.handleChange} error={form.errors.regionAnatomica} options={REGIONES_ANATOMICAS} />
+                <Select label="Prioridad imagenología *" name="prioridadImagen" value={form.values.prioridadImagen} onChange={form.handleChange} error={form.errors.prioridadImagen} options={PRIORIDADES} />
+                <Input label="Observaciones para imagenología (opcional)" name="observacionesImagenologia" value={form.values.observacionesImagenologia} onChange={form.handleChange} />
+              </div>
+            )}
           </div>
 
           <div className="actions">

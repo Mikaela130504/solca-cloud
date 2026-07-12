@@ -5,7 +5,7 @@ export default function Select({ label, error, options = [], id, className = "",
     <label className={`field ${className}`} htmlFor={inputId}>
       <span className="field-label">{label}</span>
       <select id={inputId} className="field-control" {...props}>
-        <option value="">Seleccione</option>
+        <option value="">Seleccione...</option>
         {options.map((option) => (
           <option key={option} value={option}>
             {option}

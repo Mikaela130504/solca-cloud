@@ -12,7 +12,7 @@ import useAuth from "../../hooks/useAuth.js";
 import useForm from "../../hooks/useForm.js";
 import { getApiErrorMessage } from "../../services/api.js";
 import { createImagingStudy, downloadImagingStudy, listAllImagingStudies, saveImagingResult } from "../../services/imagingService.js";
-import { FORMATOS_IMAGEN, HOSPITAL_BRANCHES, REGIONES_ANATOMICAS, TIPOS_ESTUDIO } from "../../utils/constants.js";
+import { FORMATOS_IMAGEN, HOSPITAL_BRANCHES, PRIORIDADES, REGIONES_ANATOMICAS, TIPOS_ESTUDIO } from "../../utils/constants.js";
 import { toLocalDateInputValue } from "../../utils/helpers.js";
 import { ROLES } from "../../utils/roles.js";
 import { required, rule } from "../../utils/validators.js";
@@ -26,14 +26,15 @@ const initialValues = {
   tipoEstudio: "",
   regionAnatomica: "",
   fecha: toLocalDateInputValue(),
-  formato: "DICOM",
+  formato: "",
+  prioridad: "",
   sede: "",
   medico: "",
   indicacion: "",
 };
 
 const resultInitial = {
-  formato: "DICOM",
+  formato: "",
   resultado: "",
   observaciones: "",
   tecnicoResponsable: "",
@@ -47,12 +48,18 @@ const rules = {
   regionAnatomica: [rule(required, "Seleccione región anatómica.")],
   fecha: [rule(required, "Ingrese fecha.")],
   formato: [rule(required, "Seleccione el formato.")],
+  prioridad: [rule(required, "Seleccione la prioridad.")],
   sede: [rule(required, "Seleccione la sede.")],
   medico: [rule(required, "El médico responsable es obligatorio.")],
 };
 
 function StatusBadge({ status }) {
   return <span className={`status-badge status-${(status || "SOLICITADO").toLowerCase()}`}>{status || "SOLICITADO"}</span>;
+}
+
+function PriorityBadge({ priority }) {
+  const normalized = (priority || "NORMAL").toUpperCase();
+  return <span className={`status-badge ${normalized === "URGENTE" ? "status-pendiente" : "status-en_proceso"}`}>{normalized}</span>;
 }
 
 export default function Imaging() {
@@ -145,7 +152,7 @@ export default function Imaging() {
     setResult({
       formato: study.formato || "DICOM",
       resultado: study.resultado || "",
-      observaciones: study.observaciones || "",
+      observaciones: study.observacionesImagenologo || study.observaciones || "",
       tecnicoResponsable: study.tecnicoResponsable || user?.name || user?.username || "",
       hora: study.hora || new Date().toTimeString().slice(0, 5),
       archivo: null,
@@ -206,14 +213,15 @@ export default function Imaging() {
               <PatientAutocomplete selectedPatient={selectedPatient} onSelect={handlePatientSelect} error={form.errors.idPacienteRegional} />
               <Input label="Paciente seleccionado" name="paciente" value={form.values.paciente} readOnly />
               <PatientIdentifiers patient={selectedPatient} />
-              <Select label="Tipo de estudio" name="tipoEstudio" value={form.values.tipoEstudio} onChange={form.handleChange} error={form.errors.tipoEstudio} options={TIPOS_ESTUDIO} />
-              <Select label="Región anatómica" name="regionAnatomica" value={form.values.regionAnatomica} onChange={form.handleChange} error={form.errors.regionAnatomica} options={REGIONES_ANATOMICAS} />
-              <Input label="Fecha" type="date" name="fecha" value={form.values.fecha} readOnly error={form.errors.fecha} />
-              <Select label="Formato esperado" name="formato" value={form.values.formato} onChange={form.handleChange} error={form.errors.formato} options={FORMATOS_IMAGEN} />
-              <Select label="Sede" name="sede" value={form.values.sede} onChange={form.handleChange} error={form.errors.sede} options={HOSPITAL_BRANCHES} />
+              <Select label="Tipo de estudio *" name="tipoEstudio" value={form.values.tipoEstudio} onChange={form.handleChange} error={form.errors.tipoEstudio} options={TIPOS_ESTUDIO} />
+              <Select label="Región anatómica *" name="regionAnatomica" value={form.values.regionAnatomica} onChange={form.handleChange} error={form.errors.regionAnatomica} options={REGIONES_ANATOMICAS} />
+              <Input label="Fecha *" type="date" name="fecha" value={form.values.fecha} readOnly error={form.errors.fecha} />
+              <Select label="Formato esperado *" name="formato" value={form.values.formato} onChange={form.handleChange} error={form.errors.formato} options={FORMATOS_IMAGEN} />
+              <Select label="Prioridad *" name="prioridad" value={form.values.prioridad} onChange={form.handleChange} error={form.errors.prioridad} options={PRIORIDADES} />
+              <Select label="Sede *" name="sede" value={form.values.sede} onChange={form.handleChange} error={form.errors.sede} options={HOSPITAL_BRANCHES} />
               <Input label="Médico solicitante" name="medico" value={form.values.medico} readOnly error={form.errors.medico} />
             </div>
-            <Input label="Indicación clínica" type="textarea" name="indicacion" value={form.values.indicacion} onChange={form.handleChange} />
+            <Input label="Observaciones del médico (opcional)" type="textarea" name="indicacion" value={form.values.indicacion} onChange={form.handleChange} />
             <div className="actions">
               <Button type="submit" loading={saving}>Enviar solicitud</Button>
             </div>
@@ -252,7 +260,7 @@ export default function Imaging() {
                     <td>{study.sede}</td>
                     <td>{study.fecha}</td>
                     <td className="inline-actions">
-                      <Button variant="secondary" onClick={() => selectStudy(study)}>{canProcess && study.estado !== "INFORMADO" ? "Procesar" : "Ver"}</Button>
+                      <Button variant="secondary" onClick={() => selectStudy(study)}>{canProcess && study.estado !== "INFORMADO" ? "Procesar" : "Ver estudio e informe"}</Button>
                       {study.url && <Button variant="ghost" onClick={() => downloadStudy(study)}>Descargar</Button>}
                     </td>
                   </tr>
@@ -266,24 +274,30 @@ export default function Imaging() {
 
       {activeStudy && (
         <Card title="Estudio de Imagenología">
-          <div className="grid grid-3 form-section">
-            <div className="readonly-box"><strong>Paciente</strong><br />{activeStudy.idPacienteRegional || activeStudy.cedula}</div>
-            <div className="readonly-box"><strong>Médico solicitante</strong><br />{activeStudy.medico || "No registrado"}</div>
-            <div className="readonly-box"><strong>Tipo de estudio</strong><br />{activeStudy.tipoEstudio}</div>
-            <div className="readonly-box"><strong>Región anatómica</strong><br />{activeStudy.regionAnatomica || "No registrada"}</div>
-            <div className="readonly-box"><strong>Fecha</strong><br />{activeStudy.fecha}</div>
-            <div className="readonly-box"><strong>Hora</strong><br />{activeStudy.hora || "Pendiente"}</div>
-            <div className="readonly-box"><strong>Sede</strong><br />{activeStudy.sede}</div>
-            <div className="readonly-box"><strong>Estado</strong><br /><StatusBadge status={activeStudy.estado} /></div>
-            <div className="readonly-box"><strong>Solicitud médica</strong><br />{activeStudy.observaciones || "Sin observaciones"}</div>
+          <div className="table-wrap form-section">
+            <table className="data-table">
+              <tbody>
+                <tr><th>Paciente</th><td>{activeStudy.idPacienteRegional || activeStudy.cedula}</td></tr>
+                <tr><th>Médico solicitante</th><td>{activeStudy.medico || "No registrado"}</td></tr>
+                <tr><th>Especialidad</th><td>{activeStudy.especialidad || "No registrada"}</td></tr>
+                <tr><th>Tipo de estudio</th><td>{activeStudy.tipoEstudio}</td></tr>
+                <tr><th>Región anatómica</th><td>{activeStudy.regionAnatomica || "No registrada"}</td></tr>
+                <tr><th>Prioridad</th><td><PriorityBadge priority={activeStudy.prioridad} /></td></tr>
+                <tr><th>Sede</th><td>{activeStudy.sede}</td></tr>
+                <tr><th>Fecha</th><td>{activeStudy.fecha}</td></tr>
+                <tr><th>Hora</th><td>{activeStudy.hora || "Pendiente"}</td></tr>
+                <tr><th>Estado</th><td><StatusBadge status={activeStudy.estado} /></td></tr>
+                <tr><th>Observaciones del médico</th><td>{activeStudy.observaciones || "Sin observaciones"}</td></tr>
+              </tbody>
+            </table>
           </div>
           <form onSubmit={saveResult}>
             <div className="grid grid-3 form-section">
               <Input label="Técnico responsable" name="tecnicoResponsable" value={result.tecnicoResponsable} onChange={(event) => setResult((current) => ({ ...current, tecnicoResponsable: event.target.value }))} readOnly={!canProcess || activeStudy.estado === "INFORMADO"} />
-              <Input label="Hora" type="time" name="hora" value={result.hora} onChange={(event) => setResult((current) => ({ ...current, hora: event.target.value }))} readOnly={!canProcess || activeStudy.estado === "INFORMADO"} />
+              <Input label="Hora del estudio" type="time" name="hora" value={result.hora} onChange={(event) => setResult((current) => ({ ...current, hora: event.target.value }))} readOnly={!canProcess || activeStudy.estado === "INFORMADO"} />
               <Select label="Formato final" name="formato" value={result.formato} onChange={(event) => setResult((current) => ({ ...current, formato: event.target.value }))} options={FORMATOS_IMAGEN} disabled={!canProcess || activeStudy.estado === "INFORMADO"} />
-              <Input label="Informe / resultado" type="textarea" name="resultado" value={result.resultado} onChange={(event) => setResult((current) => ({ ...current, resultado: event.target.value }))} readOnly={!canProcess || activeStudy.estado === "INFORMADO"} />
-              <Input label="Observaciones" type="textarea" name="observaciones" value={result.observaciones} onChange={(event) => setResult((current) => ({ ...current, observaciones: event.target.value }))} readOnly={!canProcess || activeStudy.estado === "INFORMADO"} />
+              <Input label="Informe del imagenólogo" type="textarea" name="resultado" value={result.resultado} onChange={(event) => setResult((current) => ({ ...current, resultado: event.target.value }))} readOnly={!canProcess || activeStudy.estado === "INFORMADO"} />
+              <Input label="Conclusión diagnóstica / observaciones del imagenólogo" type="textarea" name="observaciones" value={result.observaciones} onChange={(event) => setResult((current) => ({ ...current, observaciones: event.target.value }))} readOnly={!canProcess || activeStudy.estado === "INFORMADO"} />
               {canProcess && activeStudy.estado !== "INFORMADO" && (
                 <label className="field">
                   <span className="field-label">Archivo diagnóstico</span>

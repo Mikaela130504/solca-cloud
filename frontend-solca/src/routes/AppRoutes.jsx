@@ -8,6 +8,7 @@ import Laboratory from "../pages/Laboratory/Laboratory.jsx";
 import Imaging from "../pages/Imaging/Imaging.jsx";
 import Repository from "../pages/Repository/Repository.jsx";
 import SystemStatus from "../pages/SystemStatus/SystemStatus.jsx";
+import Audit from "../pages/Audit/Audit.jsx";
 import NotFound from "../pages/NotFound/NotFound.jsx";
 import MainLayout from "../layouts/MainLayout.jsx";
 import RutaProtegida from "./RutaProtegida.jsx";
@@ -43,6 +44,9 @@ export default function AppRoutes() {
           </Route>
           <Route element={<RutaProtegida roles={ROLE_PERMISSIONS.systemStatus} />}>
             <Route path={ROUTES.systemStatus} element={<SystemStatus />} />
+          </Route>
+          <Route element={<RutaProtegida roles={ROLE_PERMISSIONS.audit} />}>
+            <Route path={ROUTES.audit} element={<Audit />} />
           </Route>
         </Route>
       </Route>

@@ -8,7 +8,7 @@ import Toast from "../../components/common/Toast.jsx";
 import useForm from "../../hooks/useForm.js";
 import { getApiErrorMessage } from "../../services/api.js";
 import { createPatient, getPatientByCedula } from "../../services/patientService.js";
-import { BLOOD_TYPES, CIUDADES_ECUADOR, ECUADOR_PROVINCES, ESTADOS_CIVILES, HOSPITAL_BRANCHES, SEGUROS_MEDICOS, SEXOS } from "../../utils/constants.js";
+import { BLOOD_TYPES, CIUDADES_POR_PROVINCIA, ECUADOR_PROVINCES, ESTADOS_CIVILES, HOSPITAL_BRANCHES, SEGUROS_MEDICOS, SEXOS } from "../../utils/constants.js";
 import { calculateAge, isEmail, isNotFutureDate, isPhone, isValidEcuadorianCedula, onlyLetters, required, rule } from "../../utils/validators.js";
 
 const initialValues = {
@@ -60,11 +60,17 @@ export default function PatientMaster() {
   const [toast, setToast] = useState({ message: "", type: "success" });
   const [loadedPatient, setLoadedPatient] = useState(null);
   const age = calculateAge(form.values.fechaNacimiento);
+  const cityOptions = form.values.provincia ? (CIUDADES_POR_PROVINCIA[form.values.provincia] || []) : [];
 
   const handleDigits = (event) => {
     const { name, value, maxLength } = event.target;
     const digits = value.replace(/\D/g, "").slice(0, Number(maxLength) || 10);
     form.setValues((current) => ({ ...current, [name]: digits }));
+  };
+
+  const handleProvinceChange = (event) => {
+    const provincia = event.target.value;
+    form.setValues((current) => ({ ...current, provincia, ciudad: "" }));
   };
 
   const handleSubmit = async (event) => {
@@ -150,13 +156,13 @@ export default function PatientMaster() {
         <form onSubmit={handleSubmit} noValidate>
           <div className="form-section">
             <div className="grid grid-3">
-              <Input label="Cédula ecuatoriana" name="cedula" value={form.values.cedula} onChange={handleDigits} error={form.errors.cedula} maxLength="10" inputMode="numeric" />
-              <Input label="Nombres" name="nombres" value={form.values.nombres} onChange={form.handleChange} error={form.errors.nombres} />
-              <Input label="Apellidos" name="apellidos" value={form.values.apellidos} onChange={form.handleChange} error={form.errors.apellidos} />
-              <Input label="Fecha de nacimiento" type="date" name="fechaNacimiento" value={form.values.fechaNacimiento} onChange={form.handleChange} error={form.errors.fechaNacimiento} hint={age !== null ? `Edad calculada: ${age} años` : ""} />
-              <Select label="Sexo" name="sexo" value={form.values.sexo} onChange={form.handleChange} error={form.errors.sexo} options={SEXOS} />
-              <Select label="Estado civil" name="estadoCivil" value={form.values.estadoCivil} onChange={form.handleChange} error={form.errors.estadoCivil} options={ESTADOS_CIVILES} />
-              <Select label="Sede de registro" name="sede" value={form.values.sede} onChange={form.handleChange} error={form.errors.sede} options={HOSPITAL_BRANCHES} />
+              <Input label="Cédula ecuatoriana *" name="cedula" value={form.values.cedula} onChange={handleDigits} error={form.errors.cedula} maxLength="10" inputMode="numeric" />
+              <Input label="Nombres *" name="nombres" value={form.values.nombres} onChange={form.handleChange} error={form.errors.nombres} />
+              <Input label="Apellidos *" name="apellidos" value={form.values.apellidos} onChange={form.handleChange} error={form.errors.apellidos} />
+              <Input label="Fecha de nacimiento *" type="date" name="fechaNacimiento" value={form.values.fechaNacimiento} onChange={form.handleChange} error={form.errors.fechaNacimiento} hint={age !== null ? `Edad calculada: ${age} años` : ""} />
+              <Select label="Sexo *" name="sexo" value={form.values.sexo} onChange={form.handleChange} error={form.errors.sexo} options={SEXOS} />
+              <Select label="Estado civil *" name="estadoCivil" value={form.values.estadoCivil} onChange={form.handleChange} error={form.errors.estadoCivil} options={ESTADOS_CIVILES} />
+              <Select label="Sede de registro *" name="sede" value={form.values.sede} onChange={form.handleChange} error={form.errors.sede} options={HOSPITAL_BRANCHES} />
               <PatientIdentifiers patient={loadedPatient} />
             </div>
           </div>
@@ -164,23 +170,23 @@ export default function PatientMaster() {
           <div className="form-section">
             <div className="form-section-title">Ubicación y contacto</div>
             <div className="grid grid-3">
-              <Input label="Dirección" name="direccion" value={form.values.direccion} onChange={form.handleChange} error={form.errors.direccion} />
-              <Select label="Provincia" name="provincia" value={form.values.provincia} onChange={form.handleChange} error={form.errors.provincia} options={ECUADOR_PROVINCES} />
-              <Select label="Ciudad" name="ciudad" value={form.values.ciudad} onChange={form.handleChange} error={form.errors.ciudad} options={CIUDADES_ECUADOR} />
-              <Input label="Teléfono" name="telefono" value={form.values.telefono} onChange={handleDigits} error={form.errors.telefono} maxLength="10" inputMode="numeric" />
-              <Input label="Correo" type="email" name="correo" value={form.values.correo} onChange={form.handleChange} error={form.errors.correo} />
-              <Input label="Teléfono de emergencia" name="contactoEmergencia" value={form.values.contactoEmergencia} onChange={handleDigits} error={form.errors.contactoEmergencia} maxLength="10" inputMode="numeric" />
+              <Input label="Dirección *" name="direccion" value={form.values.direccion} onChange={form.handleChange} error={form.errors.direccion} />
+              <Select label="Provincia *" name="provincia" value={form.values.provincia} onChange={handleProvinceChange} error={form.errors.provincia} options={ECUADOR_PROVINCES} />
+              <Select label="Ciudad *" name="ciudad" value={form.values.ciudad} onChange={form.handleChange} error={form.errors.ciudad} options={cityOptions} disabled={!form.values.provincia} />
+              <Input label="Teléfono *" name="telefono" value={form.values.telefono} onChange={handleDigits} error={form.errors.telefono} maxLength="10" inputMode="numeric" />
+              <Input label="Correo *" type="email" name="correo" value={form.values.correo} onChange={form.handleChange} error={form.errors.correo} />
+              <Input label="Teléfono de emergencia *" name="contactoEmergencia" value={form.values.contactoEmergencia} onChange={handleDigits} error={form.errors.contactoEmergencia} maxLength="10" inputMode="numeric" />
             </div>
           </div>
 
           <div className="form-section">
             <div className="form-section-title">Cobertura y observaciones</div>
             <div className="grid grid-3">
-              <Select label="Seguro" name="seguro" value={form.values.seguro} onChange={form.handleChange} error={form.errors.seguro} options={SEGUROS_MEDICOS} />
-              <Select label="Tipo de sangre" name="tipoSangre" value={form.values.tipoSangre} onChange={form.handleChange} error={form.errors.tipoSangre} options={BLOOD_TYPES} />
-              <Input label="Nacionalidad" name="nacionalidad" value={form.values.nacionalidad} onChange={form.handleChange} error={form.errors.nacionalidad} />
+              <Select label="Seguro *" name="seguro" value={form.values.seguro} onChange={form.handleChange} error={form.errors.seguro} options={SEGUROS_MEDICOS} />
+              <Select label="Tipo de sangre *" name="tipoSangre" value={form.values.tipoSangre} onChange={form.handleChange} error={form.errors.tipoSangre} options={BLOOD_TYPES} />
+              <Input label="Nacionalidad *" name="nacionalidad" value={form.values.nacionalidad} onChange={form.handleChange} error={form.errors.nacionalidad} />
             </div>
-            <Input label="Observaciones" type="textarea" name="observaciones" value={form.values.observaciones} onChange={form.handleChange} />
+            <Input label="Observaciones (opcional)" type="textarea" name="observaciones" value={form.values.observaciones} onChange={form.handleChange} />
           </div>
 
           <div className="actions">

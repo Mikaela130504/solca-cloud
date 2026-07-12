@@ -26,7 +26,7 @@ const initialValues = {
   cedula: "",
   paciente: "",
   tipoExamen: "",
-  prioridad: "Normal",
+  prioridad: "",
   fecha: toLocalDateInputValue(),
   sede: "",
   medico: "",
@@ -290,7 +290,11 @@ export default function Laboratory() {
                     <td>{order.prioridad || "NORMAL"}</td>
                     <td>{order.sede}</td>
                     <td>{order.fecha}</td>
-                    <td><Button variant="secondary" onClick={() => selectOrder(order)}>{canProcess && normalizeStatus(order.estado) !== "FINALIZADO" ? "Procesar" : "Editar"}</Button></td>
+                    <td>
+                      <Button variant="secondary" onClick={() => selectOrder(order)}>
+                        {canProcess ? (normalizeStatus(order.estado) !== "FINALIZADO" ? "Procesar" : "Editar resultado") : "Ver resultado"}
+                      </Button>
+                    </td>
                   </tr>
                 ))}
               </tbody>

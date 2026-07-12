@@ -8,6 +8,7 @@ export const ROUTES = {
   imaging: "/imagenologia/nuevo",
   repository: "/repositorio-clinico",
   systemStatus: "/estado-microservicios",
+  audit: "/auditoria",
 };
 
 export const HOSPITAL_BRANCHES = [
@@ -106,3 +107,30 @@ export const CIUDADES_ECUADOR = [
   "Riobamba",
   "Santo Domingo",
 ];
+
+export const CIUDADES_POR_PROVINCIA = {
+  Azuay: ["Cuenca", "Gualaceo", "Paute", "Santa Isabel"],
+  Bolívar: ["Guaranda", "Chillanes", "San Miguel"],
+  Cañar: ["Azogues", "Biblián", "La Troncal"],
+  Carchi: ["Tulcán", "Montúfar", "Espejo"],
+  Chimborazo: ["Riobamba", "Alausí", "Guano"],
+  Cotopaxi: ["Latacunga", "La Maná", "Pujilí", "Salcedo"],
+  "El Oro": ["Machala", "Pasaje", "Santa Rosa", "Huaquillas"],
+  Esmeraldas: ["Esmeraldas", "Atacames", "Quinindé"],
+  Galápagos: ["Puerto Baquerizo Moreno", "Puerto Ayora", "Puerto Villamil"],
+  Guayas: ["Guayaquil", "Daule", "Durán", "Milagro", "Samborondón"],
+  Imbabura: ["Ibarra", "Otavalo", "Cotacachi", "Antonio Ante"],
+  Loja: ["Loja", "Catamayo", "Macará", "Saraguro"],
+  "Los Ríos": ["Babahoyo", "Quevedo", "Ventanas", "Vinces"],
+  Manabí: ["Portoviejo", "Manta", "Chone", "Jipijapa", "Montecristi"],
+  "Morona Santiago": ["Macas", "Gualaquiza", "Sucúa"],
+  Napo: ["Tena", "Archidona", "El Chaco"],
+  Orellana: ["Francisco de Orellana", "La Joya de los Sachas", "Loreto"],
+  Pastaza: ["Puyo", "Mera", "Santa Clara"],
+  Pichincha: ["Quito", "Cayambe", "Mejía", "Rumiñahui"],
+  "Santa Elena": ["Santa Elena", "La Libertad", "Salinas"],
+  "Santo Domingo": ["Santo Domingo", "La Concordia"],
+  Sucumbíos: ["Nueva Loja", "Shushufindi", "Cascales"],
+  Tungurahua: ["Ambato", "Baños", "Pelileo", "Píllaro"],
+  "Zamora Chinchipe": ["Zamora", "Yantzaza", "Nangaritza"],
+};

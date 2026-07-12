@@ -13,6 +13,7 @@ const items = [
   { to: ROUTES.imaging, label: "Imagenología", icon: "RX", roles: ROLE_PERMISSIONS.imaging },
   { to: ROUTES.repository, label: "Repositorio clínico", icon: "RC", roles: ROLE_PERMISSIONS.repository },
   { to: ROUTES.systemStatus, label: "Estado del sistema", icon: "UP", roles: ROLE_PERMISSIONS.systemStatus },
+  { to: ROUTES.audit, label: "Auditoría", icon: "AU", roles: ROLE_PERMISSIONS.audit },
 ];
 
 export default function Sidebar() {

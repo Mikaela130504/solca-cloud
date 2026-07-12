@@ -29,7 +29,7 @@ class RepositorioController {
   RepositorioController(RepositorioService service) { this.service = service; }
   @GetMapping @PreAuthorize("hasAnyRole('ADMIN','MEDICO')") Map<String,Object> vacio() { return Map.of("mensaje", "Ingrese un identificador regional o cédula para consultar el repositorio clínico."); }
   @GetMapping("/{paciente}") @PreAuthorize("hasAnyRole('ADMIN','MEDICO')") Map<String,Object> consultar(@PathVariable("paciente") String paciente, @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization, HttpServletRequest http) { return service.consultar(paciente, authorization, http); }
-  @GetMapping("/auditorias") @PreAuthorize("hasRole('ADMIN')") List<Map<String,Object>> auditorias() { return service.auditorias(); }
+  @GetMapping("/auditorias") @PreAuthorize("hasRole('ADMIN')") List<Map<String,Object>> auditorias(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorization) { return service.auditorias(authorization); }
   @GetMapping("/estado-servicios") @PreAuthorize("hasRole('ADMIN')") List<Map<String,Object>> estadoServicios() { return service.estadoServicios(); }
   @GetMapping("/logs-integracion") @PreAuthorize("hasRole('ADMIN')") List<Map<String,Object>> logsIntegracion() { return service.logsIntegracion(); }
 }
@@ -47,6 +47,7 @@ class RepositorioService {
   private final RestClient rest = RestClient.builder().build();
   private final JdbcTemplate jdbc;
   @Value("${service.pacientes:http://localhost:8001}") String pacientes;
+  @Value("${service.auth:http://localhost:8000}") String auth;
   @Value("${service.consultas:http://localhost:8002}") String consultas;
   @Value("${service.laboratorios:http://localhost:8003}") String laboratorios;
   @Value("${service.imagenologia:http://localhost:8004}") String imagenologia;
@@ -106,8 +107,40 @@ class RepositorioService {
     }
   }
 
-  List<Map<String,Object>> auditorias() {
-    return jdbc.queryForList("SELECT usuario, rol, fecha_hora, accion, paciente, endpoint, ip, modulo, resultado, metodo_http, estado_http, tiempo_respuesta_ms, mensaje FROM auditorias ORDER BY id DESC LIMIT 50");
+  List<Map<String,Object>> auditorias(String authorization) {
+    List<Map<String,Object>> registros = new ArrayList<>();
+    registros.addAll(etiquetar(jdbc.queryForList("SELECT usuario, rol, fecha_hora, accion, paciente, endpoint, ip, modulo, resultado, metodo_http, estado_http, tiempo_respuesta_ms, mensaje FROM auditorias ORDER BY id DESC LIMIT 100"), "Repositorio"));
+    registros.addAll(auditoriasServicio("Autenticación", auth, authorization));
+    registros.addAll(auditoriasServicio("Paciente Maestro", pacientes, authorization));
+    registros.addAll(auditoriasServicio("Consulta Clínica", consultas, authorization));
+    registros.addAll(auditoriasServicio("Laboratorio", laboratorios, authorization));
+    registros.addAll(auditoriasServicio("Imagenología", imagenologia, authorization));
+    registros.sort((a, b) -> String.valueOf(b.getOrDefault("fecha_hora", "")).compareTo(String.valueOf(a.getOrDefault("fecha_hora", ""))));
+    return registros.stream().limit(300).toList();
+  }
+
+  List<Map<String,Object>> auditoriasServicio(String nombre, String baseUrl, String authorization) {
+    try {
+      Object body = rest.get().uri(baseUrl + "/auditorias").header(HttpHeaders.AUTHORIZATION, authorization).retrieve().body(Object.class);
+      if (body instanceof List<?> list) {
+        List<Map<String,Object>> salida = new ArrayList<>();
+        for (Object item : list) {
+          if (item instanceof Map<?,?> map) {
+            Map<String,Object> row = new LinkedHashMap<>();
+            map.forEach((key, value) -> row.put(String.valueOf(key), value));
+            row.put("microservicio", nombre);
+            salida.add(row);
+          }
+        }
+        return salida;
+      }
+    } catch (Exception ignored) {}
+    return List.of();
+  }
+
+  List<Map<String,Object>> etiquetar(List<Map<String,Object>> rows, String nombre) {
+    rows.forEach(row -> row.put("microservicio", nombre));
+    return rows;
   }
 
   List<Map<String,Object>> estadoServicios() {

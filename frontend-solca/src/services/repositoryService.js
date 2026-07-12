@@ -7,3 +7,8 @@ export async function getClinicalRepository(idPacienteRegional) {
   const { data } = await api.get(path);
   return data;
 }
+
+export async function listAuditRecords() {
+  const { data } = await api.get("/repositorio-clinico/auditorias");
+  return data;
+}

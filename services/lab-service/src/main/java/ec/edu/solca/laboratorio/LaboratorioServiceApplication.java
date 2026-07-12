@@ -93,7 +93,11 @@ class RegistroRepository {
   }
   void migrarRegistros(String destino) {
     Integer existe = jdbc.queryForObject("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='registros'", Integer.class);
-    if (existe != null && existe > 0) jdbc.execute("INSERT OR IGNORE INTO " + destino + " SELECT * FROM registros");
+    if (existe != null && existe > 0) {
+      try {
+        jdbc.execute("INSERT OR IGNORE INTO " + destino + "(id_paciente_regional,cedula,fecha,sede,medico,especialidad,tipo_consulta,diagnostico,tratamiento,motivo,evolucion,tipo_examen,resultado,observaciones,tipo_estudio,formato,url,region_anatomica) SELECT id_paciente_regional,cedula,fecha,sede,medico,especialidad,tipo_consulta,diagnostico,tratamiento,motivo,evolucion,tipo_examen,resultado,observaciones,tipo_estudio,formato,url,region_anatomica FROM registros");
+      } catch (Exception ignored) {}
+    }
   }
   RegistroDto crear(RegistroRequest r) {
     String estado = normalizarEstado(r.estado(), r.resultado());

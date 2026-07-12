@@ -52,7 +52,7 @@ const initialValues = {
   ginecoObservaciones: "",
   medicamentosActuales: "",
   tieneAlergias: false,
-  noTieneAlergias: true,
+  noTieneAlergias: false,
   alergias: "",
   peso: "",
   talla: "",
@@ -139,13 +139,14 @@ function buildSurgeries(values) {
     .join("; ");
 }
 
-function buildObservations(values) {
+function buildObservations(values, patient) {
+  const aplicaGineco = ["femenino", "mujer"].some((value) => patient?.sexo?.toLowerCase().includes(value));
   return [
     `Antecedentes familiares: ${buildFamilyHistory(values)}.`,
     `Antecedentes personales: ${["diabetes", "hipertension", "asma", "cirugias", "cancer", "personalesOtros"].filter((key) => values[key]).join(", ") || "Sin antecedentes marcados"}.`,
     values.cirugias ? buildSurgeries(values) : "",
     values.personalesOtros ? `Otros personales: ${values.personalesOtrosDetalle}.` : "",
-    `Gineco-obstétricos: Cesáreas ${values.cesareas || 0}; Partos ${values.partos || 0}; Abortos ${values.abortos || 0}; Embarazos ${values.embarazos || 0}; Observaciones: ${values.ginecoObservaciones || "N/A"}.`,
+    aplicaGineco ? `Gineco-obstétricos: Cesáreas ${values.cesareas || 0}; Partos ${values.partos || 0}; Abortos ${values.abortos || 0}; Embarazos ${values.embarazos || 0}; Observaciones: ${values.ginecoObservaciones || "N/A"}.` : "",
     `Medicamentos actuales: ${values.medicamentosActuales || "N/A"}.`,
     `Alergias: ${values.tieneAlergias ? values.alergias : "No refiere"}.`,
     `Examen físico: General: ${values.examenGeneral || "N/A"}; Cabeza/cuello: ${values.cabezaCuello || "N/A"}; Tórax: ${values.torax || "N/A"}; Abdomen: ${values.abdomen || "N/A"}; Extremidades: ${values.extremidades || "N/A"}; Neurológico: ${values.neurologico || "N/A"}.`,
@@ -233,7 +234,7 @@ export default function ClinicalHistory() {
       form.setValues((current) => ({
         ...current,
         tieneAlergias: false,
-        noTieneAlergias: true,
+        noTieneAlergias: checked,
         alergias: "",
       }));
       return;
@@ -296,7 +297,7 @@ export default function ClinicalHistory() {
     try {
       await createClinicalHistory({
         ...form.values,
-        observaciones: buildObservations(form.values),
+        observaciones: buildObservations(form.values, selectedPatient),
         tratamiento: form.values.tratamiento,
         diagnosticoPrincipal: `${form.values.cie10} - ${form.values.diagnosticoPrincipal}`,
         diagnosticosSecundarios: form.values.cie10Secundario ? `${form.values.cie10Secundario} - ${form.values.diagnosticoSecundario}` : "",
@@ -308,6 +309,8 @@ export default function ClinicalHistory() {
       setSaving(false);
     }
   };
+
+  const showGynecoObstetric = ["femenino", "mujer"].some((value) => selectedPatient?.sexo?.toLowerCase().includes(value));
 
   return (
     <>
@@ -366,14 +369,14 @@ export default function ClinicalHistory() {
                 {form.values.cirugiasLista.map((cirugia, index) => (
                   <div className="dynamic-row" key={`cirugia-${index}`}>
                     <Input
-                      label={`Fecha de cirugía ${index + 1}`}
+                      label="Fecha de cirugía"
                       type="date"
                       name={`cirugiaFecha-${index}`}
                       value={cirugia.fecha}
                       onChange={(event) => updateSurgery(index, "fecha", event.target.value)}
                     />
                     <Input
-                      label={`Procedimiento ${index + 1}`}
+                      label="Procedimiento"
                       name={`cirugiaProcedimiento-${index}`}
                       value={cirugia.procedimiento}
                       onChange={(event) => updateSurgery(index, "procedimiento", event.target.value)}
@@ -385,24 +388,26 @@ export default function ClinicalHistory() {
                 <Button type="button" variant="secondary" onClick={addSurgery}>+ Agregar cirugía</Button>
               </div>
             )}
-            {form.values.personalesOtros && <Input label="Detalle otros antecedentes" name="personalesOtrosDetalle" value={form.values.personalesOtrosDetalle} onChange={form.handleChange} />}
+            {form.values.personalesOtros && <Input label="Detalle de otros antecedentes (opcional)" name="personalesOtrosDetalle" value={form.values.personalesOtrosDetalle} onChange={form.handleChange} />}
           </div>
 
-          <div className="form-section">
-            <div className="form-section-title">Antecedentes gineco-obstétricos</div>
-            <div className="grid grid-4">
-              <Input label="Cesáreas" type="number" min="0" name="cesareas" value={form.values.cesareas} onChange={form.handleChange} />
-              <Input label="Partos" type="number" min="0" name="partos" value={form.values.partos} onChange={form.handleChange} />
-              <Input label="Abortos" type="number" min="0" name="abortos" value={form.values.abortos} onChange={form.handleChange} />
-              <Input label="Embarazos" type="number" min="0" name="embarazos" value={form.values.embarazos} onChange={form.handleChange} />
+          {showGynecoObstetric && (
+            <div className="form-section">
+              <div className="form-section-title">Antecedentes gineco-obstétricos</div>
+              <div className="grid grid-4">
+                <Input label="Cesáreas (opcional)" type="number" min="0" name="cesareas" value={form.values.cesareas} onChange={form.handleChange} />
+                <Input label="Partos (opcional)" type="number" min="0" name="partos" value={form.values.partos} onChange={form.handleChange} />
+                <Input label="Abortos (opcional)" type="number" min="0" name="abortos" value={form.values.abortos} onChange={form.handleChange} />
+                <Input label="Embarazos (opcional)" type="number" min="0" name="embarazos" value={form.values.embarazos} onChange={form.handleChange} />
+              </div>
+              <Input label="Observaciones gineco-obstétricas (opcional)" type="textarea" name="ginecoObservaciones" value={form.values.ginecoObservaciones} onChange={form.handleChange} />
             </div>
-            <Input label="Observaciones gineco-obstétricas" type="textarea" name="ginecoObservaciones" value={form.values.ginecoObservaciones} onChange={form.handleChange} />
-          </div>
+          )}
 
           <div className="form-section">
             <div className="form-section-title">Medicamentos y alergias</div>
             <div className="grid grid-2">
-              <Input label="Medicamentos actuales" type="textarea" name="medicamentosActuales" value={form.values.medicamentosActuales} onChange={form.handleChange} />
+              <Input label="Medicamentos actuales (opcional)" type="textarea" name="medicamentosActuales" value={form.values.medicamentosActuales} onChange={form.handleChange} />
               <div className="field">
                 <span className="field-label">¿Tiene alergias?</span>
                 <div className="checkbox-grid compact-checks">
@@ -410,21 +415,21 @@ export default function ClinicalHistory() {
                   <CheckField name="noTieneAlergias" label="No" checked={form.values.noTieneAlergias} onChange={handleCheckChange} />
                 </div>
               </div>
-              {form.values.tieneAlergias && <Input label="Descripción de alergias" type="textarea" name="alergias" value={form.values.alergias} onChange={form.handleChange} error={form.errors.alergias} />}
+              {form.values.tieneAlergias && <Input label="Descripción de alergias *" type="textarea" name="alergias" value={form.values.alergias} onChange={form.handleChange} error={form.errors.alergias} />}
             </div>
           </div>
 
           <div className="form-section">
             <div className="form-section-title">Signos vitales</div>
             <div className="grid grid-4">
-              <Input label="Peso kg" name="peso" type="number" min="0" value={form.values.peso} onChange={form.handleChange} />
-              <Input label="Talla cm" name="talla" type="number" min="0" value={form.values.talla} onChange={form.handleChange} />
-              <Input label="IMC" name="imc" value={form.values.imc} onChange={form.handleChange} readOnly />
-              <Input label="Temperatura C" name="temperatura" type="number" min="0" step="0.1" value={form.values.temperatura} onChange={form.handleChange} />
+              <Input label="Peso kg (opcional)" name="peso" type="number" min="0" value={form.values.peso} onChange={form.handleChange} placeholder="70" />
+              <Input label="Talla cm (opcional)" name="talla" type="number" min="0" value={form.values.talla} onChange={form.handleChange} placeholder="161" />
+              <Input label="IMC (opcional)" name="imc" value={form.values.imc} onChange={form.handleChange} readOnly placeholder="22.5" />
+              <Input label="Temperatura C (opcional)" name="temperatura" type="number" min="0" step="0.1" value={form.values.temperatura} onChange={form.handleChange} placeholder="36.5" />
               <Input label="Presión arterial" name="presionArterial" value={form.values.presionArterial} onChange={form.handleChange} placeholder="120/80" />
-              <Input label="Frecuencia cardíaca" name="frecuenciaCardiaca" type="number" min="0" value={form.values.frecuenciaCardiaca} onChange={form.handleChange} />
-              <Input label="Frecuencia respiratoria" name="frecuenciaRespiratoria" type="number" min="0" value={form.values.frecuenciaRespiratoria} onChange={form.handleChange} />
-              <Input label="Saturación" name="saturacion" type="number" min="0" max="100" value={form.values.saturacion} onChange={form.handleChange} />
+              <Input label="Frecuencia cardíaca (opcional)" name="frecuenciaCardiaca" type="number" min="0" value={form.values.frecuenciaCardiaca} onChange={form.handleChange} placeholder="72" />
+              <Input label="Frecuencia respiratoria (opcional)" name="frecuenciaRespiratoria" type="number" min="0" value={form.values.frecuenciaRespiratoria} onChange={form.handleChange} placeholder="18" />
+              <Input label="Saturación (opcional)" name="saturacion" type="number" min="0" max="100" value={form.values.saturacion} onChange={form.handleChange} placeholder="98" />
             </div>
           </div>
 
