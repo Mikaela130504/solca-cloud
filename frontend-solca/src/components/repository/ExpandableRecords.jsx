@@ -53,9 +53,10 @@ function RecordGroup({ title, rows, summary }) {
   );
 }
 
-export default function ExpandableRecords({ consultations, laboratories, imaging }) {
+export default function ExpandableRecords({ clinicalHistories = [], consultations, laboratories, imaging }) {
   return (
-    <div className="grid grid-3">
+    <div className="grid grid-4">
+      <RecordGroup title="Historias clínicas" rows={clinicalHistories} summary={(item) => item.diagnostico || item.motivo || "Historia clínica"} />
       <RecordGroup title="Consultas" rows={consultations} summary={(item) => item.diagnostico || item.motivo || "Consulta"} />
       <RecordGroup title="Laboratorios" rows={laboratories} summary={(item) => item.tipoExamen || item.resultado || "Laboratorio"} />
       <RecordGroup title="Imagenologia" rows={imaging} summary={(item) => item.tipoEstudio || item.resultado || "Imagenologia"} />

@@ -10,6 +10,7 @@ export const ROLE_PERMISSIONS = {
   patient: [ROLES.admin, ROLES.medico],
   clinicalHistory: [ROLES.admin, ROLES.medico],
   consultation: [ROLES.admin, ROLES.medico],
+  clinicalRecords: [ROLES.admin, ROLES.medico],
   laboratory: [ROLES.admin, ROLES.medico, ROLES.laboratorio],
   imaging: [ROLES.admin, ROLES.medico, ROLES.imagenologia],
   repository: [ROLES.admin, ROLES.medico],

@@ -4,6 +4,7 @@ import Dashboard from "../pages/Dashboard/Dashboard.jsx";
 import PatientMaster from "../pages/Patient/PatientMaster.jsx";
 import ClinicalHistory from "../pages/ClinicalHistory/ClinicalHistory.jsx";
 import Consultation from "../pages/ClinicalHistory/Consultation.jsx";
+import ClinicalRecords from "../pages/ClinicalHistory/ClinicalRecords.jsx";
 import Laboratory from "../pages/Laboratory/Laboratory.jsx";
 import Imaging from "../pages/Imaging/Imaging.jsx";
 import Repository from "../pages/Repository/Repository.jsx";
@@ -32,6 +33,9 @@ export default function AppRoutes() {
           </Route>
           <Route element={<RutaProtegida roles={ROLE_PERMISSIONS.consultation} />}>
             <Route path={ROUTES.consultation} element={<Consultation />} />
+          </Route>
+          <Route element={<RutaProtegida roles={ROLE_PERMISSIONS.clinicalRecords} />}>
+            <Route path={ROUTES.clinicalRecords} element={<ClinicalRecords />} />
           </Route>
           <Route element={<RutaProtegida roles={ROLE_PERMISSIONS.laboratory} />}>
             <Route path={ROUTES.laboratory} element={<Laboratory />} />

@@ -9,6 +9,14 @@ import PatientSummary from "../../components/repository/PatientSummary.jsx";
 import { getClinicalRepository } from "../../services/repositoryService.js";
 import "./Repository.css";
 
+function isClinicalHistory(record) {
+  return String(record?.tipoConsulta || record?.tipo_consulta || "").toLowerCase().includes("historia");
+}
+
+function sortByRecentDate(records) {
+  return [...records].sort((left, right) => new Date(right.fecha || 0) - new Date(left.fecha || 0));
+}
+
 export default function Repository() {
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [data, setData] = useState(null);
@@ -33,7 +41,10 @@ export default function Repository() {
   };
 
   const patient = data?.patient || data?.paciente;
-  const consultations = Array.isArray(data?.consultations || data?.consultas) ? data.consultations || data.consultas : [];
+  const allConsultations = Array.isArray(data?.consultations || data?.consultas) ? data.consultations || data.consultas : [];
+  const clinicalHistories = sortByRecentDate(allConsultations.filter(isClinicalHistory));
+  const consultations = sortByRecentDate(allConsultations.filter((item) => !isClinicalHistory(item)));
+  const clinicalHistory = data?.history || data?.historiaClinica || clinicalHistories[0] || null;
   const laboratories = Array.isArray(data?.laboratories || data?.laboratorios || data?.laboratorio) ? data.laboratories || data.laboratorios || data.laboratorio : [];
   const imaging = Array.isArray(data?.imaging || data?.imagenologia || data?.imagenes) ? data.imaging || data.imagenologia || data.imagenes : [];
 
@@ -61,10 +72,10 @@ export default function Repository() {
         <>
           <div className="grid grid-2 repository-main">
             <PatientSummary patient={patient} />
-            <ClinicalHistoryView history={data.history || data.historiaClinica} historiasLocales={patient?.historiasLocales || []} />
+            <ClinicalHistoryView history={clinicalHistory} historiasLocales={patient?.historiasLocales || []} />
           </div>
 
-          <ExpandableRecords consultations={consultations} laboratories={laboratories} imaging={imaging} />
+          <ExpandableRecords clinicalHistories={clinicalHistories} consultations={consultations} laboratories={laboratories} imaging={imaging} />
         </>
       )}
     </>

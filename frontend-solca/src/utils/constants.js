@@ -4,6 +4,7 @@ export const ROUTES = {
   patient: "/paciente-maestro",
   clinicalHistory: "/historia-clinica/nueva",
   consultation: "/consulta/nueva",
+  clinicalRecords: "/registros-clinicos",
   laboratory: "/laboratorio/nuevo",
   imaging: "/imagenologia/nuevo",
   repository: "/repositorio-clinico",

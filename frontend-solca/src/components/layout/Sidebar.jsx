@@ -9,6 +9,7 @@ const items = [
   { to: ROUTES.patient, label: "Pacientes", icon: "ID", roles: ROLE_PERMISSIONS.patient },
   { to: ROUTES.clinicalHistory, label: "Historia clínica", icon: "HC", roles: ROLE_PERMISSIONS.clinicalHistory },
   { to: ROUTES.consultation, label: "Consultas", icon: "+", roles: ROLE_PERMISSIONS.consultation },
+  { to: ROUTES.clinicalRecords, label: "HCE y consultas", icon: "CL", roles: ROLE_PERMISSIONS.clinicalRecords },
   { to: ROUTES.laboratory, label: "Laboratorio", icon: "LB", roles: ROLE_PERMISSIONS.laboratory },
   { to: ROUTES.imaging, label: "Imagenología", icon: "RX", roles: ROLE_PERMISSIONS.imaging },
   { to: ROUTES.repository, label: "Repositorio clínico", icon: "RC", roles: ROLE_PERMISSIONS.repository },
