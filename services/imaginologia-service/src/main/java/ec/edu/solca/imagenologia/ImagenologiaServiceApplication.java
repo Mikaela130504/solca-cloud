@@ -111,15 +111,23 @@ class RegistroController {
   private Path archivoImagenDestino(Path dir, MultipartFile archivo, String formato) throws Exception {
     String original = archivo.getOriginalFilename() == null ? "" : archivo.getOriginalFilename();
     String lower = original.toLowerCase(Locale.ROOT);
-    boolean extensionValida = "PNG".equals(formato) ? lower.endsWith(".png") : lower.endsWith(".dcm") || lower.endsWith(".dicom");
-    if (!extensionValida) {
+    byte[] bytes = archivo.getBytes();
+    boolean pngReal = bytes.length >= 8 && bytes[0] == (byte) 137 && bytes[1] == 'P' && bytes[2] == 'N' && bytes[3] == 'G' && bytes[4] == 13 && bytes[5] == 10 && bytes[6] == 26 && bytes[7] == 10;
+    boolean dicomConPreambulo = bytes.length >= 132 && bytes[128] == 'D' && bytes[129] == 'I' && bytes[130] == 'C' && bytes[131] == 'M';
+    boolean extensionDicom = lower.endsWith(".dcm") || lower.endsWith(".dicom") || lower.endsWith(".ima") || !lower.contains(".");
+    boolean extensionNoDicom = lower.endsWith(".png") || lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".pdf");
+    boolean extensionValida = "PNG".equals(formato) ? lower.endsWith(".png") : extensionDicom || dicomConPreambulo;
+    if (!extensionValida || ("DICOM".equals(formato) && extensionNoDicom)) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El archivo no coincide con el formato seleccionado " + formato + ".");
     }
-    byte[] bytes = archivo.getBytes();
-    if ("PNG".equals(formato) && (bytes.length < 8 || bytes[0] != (byte) 137 || bytes[1] != 'P' || bytes[2] != 'N' || bytes[3] != 'G' || bytes[4] != 13 || bytes[5] != 10 || bytes[6] != 26 || bytes[7] != 10)) {
+    if ("PNG".equals(formato) && !pngReal) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El archivo no tiene cabecera PNG válida.");
     }
+    if ("DICOM".equals(formato) && pngReal) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El archivo no tiene formato DICOM válido.");
+    }
     String fileName = System.currentTimeMillis() + "-" + original.replaceAll("[^A-Za-z0-9._-]", "_");
+    if ("DICOM".equals(formato) && !fileName.toLowerCase(Locale.ROOT).matches(".*\\.(dcm|dicom|ima)$")) fileName += ".dcm";
     Path target = dir.resolve(fileName);
     Files.write(target, bytes);
     return target;
@@ -241,7 +249,7 @@ class RegistroRepository {
     if (url == null || url.isBlank()) return;
     String lower = url.toLowerCase(Locale.ROOT);
     if ("PNG".equals(formato) && !lower.endsWith(".png")) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La URL del archivo PNG debe terminar en .png.");
-    if ("DICOM".equals(formato) && !(lower.endsWith(".dcm") || lower.endsWith(".dicom"))) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La URL del archivo DICOM debe terminar en .dcm o .dicom.");
+    if ("DICOM".equals(formato) && !(lower.endsWith(".dcm") || lower.endsWith(".dicom") || lower.endsWith(".ima"))) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La URL del archivo DICOM debe terminar en .dcm, .dicom o .ima.");
   }
   String normalizarPrioridad(String prioridad) { return prioridad == null || prioridad.isBlank() ? "NORMAL" : prioridad.trim().toUpperCase(Locale.ROOT); }
   String normalizarEstado(String estado, String url, String resultado) { return estado == null || estado.isBlank() ? ((url != null && !url.isBlank()) || (resultado != null && !resultado.isBlank()) ? "REALIZADO" : "SOLICITADO") : validarEstado(estado); }

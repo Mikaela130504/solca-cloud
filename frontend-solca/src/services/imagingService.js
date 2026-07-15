@@ -30,9 +30,7 @@ export async function createImagingStudy(study) {
   Object.entries(payload).forEach(([key, value]) => {
     if (value !== undefined && value !== null) formData.append(key, value);
   });
-  const { data } = await api.post("/imagenologia", formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
+  const { data } = await api.post("/imagenologia", formData);
   return data;
 }
 
@@ -67,9 +65,7 @@ export async function saveImagingResult(id, study) {
   Object.entries(payload).forEach(([key, value]) => {
     if (value !== undefined && value !== null) formData.append(key, value);
   });
-  const { data } = await api.put(`/imagenologia/${id}/resultado`, formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
+  const { data } = await api.put(`/imagenologia/${id}/resultado`, formData);
   return data;
 }
 

@@ -26,11 +26,11 @@ const IMAGE_FORMAT_RULES = {
     error: "Solo se permiten archivos PNG reales con extensión .png.",
   },
   DICOM: {
-    accept: ".dcm,.dicom,application/dicom",
+    accept: ".dcm,.dicom,.ima,application/dicom",
     extension: ".dcm",
-    extensions: [".dcm", ".dicom"],
-    label: "Solo archivo DICOM .dcm o .dicom.",
-    error: "Solo se permiten archivos DICOM con extensión .dcm o .dicom.",
+    extensions: [".dcm", ".dicom", ".ima"],
+    label: "Archivo DICOM .dcm, .dicom, .ima o DICOM sin extensión.",
+    error: "Solo se permiten archivos DICOM reales. No use PNG, JPG ni PDF en formato DICOM.",
   },
 };
 
@@ -152,13 +152,17 @@ export default function Imaging() {
     const lowerName = file.name.toLowerCase();
     const extensions = rule.extensions || [rule.extension];
     const hasExpectedExtension = extensions.some((extension) => lowerName.endsWith(extension));
+    const hasKnownNonDicomExtension = [".png", ".jpg", ".jpeg", ".pdf"].some((extension) => lowerName.endsWith(extension));
     const header = new Uint8Array(await file.slice(0, Math.max(DICOM_SIGNATURE_OFFSET + 4, PNG_SIGNATURE.length)).arrayBuffer());
     const isValidPng = format === "PNG" && PNG_SIGNATURE.every((byte, index) => header[index] === byte);
     const hasDicomPreamble = header.length >= DICOM_SIGNATURE_OFFSET + 4 && header[DICOM_SIGNATURE_OFFSET] === 68 && header[DICOM_SIGNATURE_OFFSET + 1] === 73 && header[DICOM_SIGNATURE_OFFSET + 2] === 67 && header[DICOM_SIGNATURE_OFFSET + 3] === 77;
     const isClearlyNotDicom = PNG_SIGNATURE.every((byte, index) => header[index] === byte) || JPEG_SIGNATURE.every((byte, index) => header[index] === byte) || PDF_SIGNATURE.every((byte, index) => header[index] === byte);
-    const isValidDicom = format === "DICOM" && hasExpectedExtension && (hasDicomPreamble || !isClearlyNotDicom);
+    const isValidDicom = format === "DICOM" && !hasKnownNonDicomExtension && (hasExpectedExtension || hasDicomPreamble || !isClearlyNotDicom);
 
-    if (!hasExpectedExtension || (!isValidPng && !isValidDicom)) {
+    const invalidPng = format === "PNG" && (!hasExpectedExtension || !isValidPng);
+    const invalidDicom = format === "DICOM" && !isValidDicom;
+
+    if (invalidPng || invalidDicom) {
       event.target.value = "";
       setFileName("");
       setResult((current) => ({ ...current, archivo: null, formato }));
