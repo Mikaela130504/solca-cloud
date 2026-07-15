@@ -25,6 +25,7 @@ function rowsFrom(value) {
 
 export default function Repository() {
   const [selectedPatient, setSelectedPatient] = useState(null);
+  const [patientQuery, setPatientQuery] = useState("");
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -36,10 +37,12 @@ export default function Repository() {
 
   const handleSearch = async (event) => {
     event.preventDefault();
-    if (!selectedPatient?.idPacienteRegional) return;
+    const typedIdentifier = patientQuery.split("·")[0].trim();
+    const identifier = selectedPatient?.idPacienteRegional || typedIdentifier;
+    if (!identifier) return;
     setLoading(true);
     try {
-      const payload = await getClinicalRepository(selectedPatient.idPacienteRegional);
+      const payload = await getClinicalRepository(identifier);
       setData(payload);
     } finally {
       setLoading(false);
@@ -74,7 +77,12 @@ export default function Repository() {
       </div>
 
       <form className="repository-toolbar" onSubmit={handleSearch}>
-        <PatientAutocomplete selectedPatient={selectedPatient} onSelect={setSelectedPatient} label="Buscar paciente" />
+        <PatientAutocomplete
+          selectedPatient={selectedPatient}
+          onSelect={setSelectedPatient}
+          onQueryChange={setPatientQuery}
+          label="Buscar paciente"
+        />
         <PatientIdentifiers patient={selectedPatient} />
         <Button type="submit" loading={loading}>Buscar</Button>
       </form>

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { searchPatients } from "../../services/patientService.js";
 import Input from "./Input.jsx";
 
-export default function PatientAutocomplete({ value = "", selectedPatient, onSelect, error, label = "Paciente" }) {
+export default function PatientAutocomplete({ value = "", selectedPatient, onSelect, onQueryChange, error, label = "Paciente" }) {
   const [query, setQuery] = useState(value);
   const [patients, setPatients] = useState([]);
   const [open, setOpen] = useState(false);
@@ -33,14 +33,18 @@ export default function PatientAutocomplete({ value = "", selectedPatient, onSel
   }, [query, selectedPatient]);
 
   const handleChange = (event) => {
-    setQuery(event.target.value);
+    const nextQuery = event.target.value;
+    setQuery(nextQuery);
+    onQueryChange?.(nextQuery);
     setOpen(true);
     if (selectedPatient) onSelect(null);
   };
 
   const pick = (patient) => {
+    const nextQuery = `${patient.idPacienteRegional} · ${patient.cedula} - ${patient.nombres} ${patient.apellidos}`;
     setOpen(false);
-    setQuery(`${patient.idPacienteRegional} · ${patient.cedula} - ${patient.nombres} ${patient.apellidos}`);
+    setQuery(nextQuery);
+    onQueryChange?.(patient.idPacienteRegional);
     onSelect(patient);
   };
 
