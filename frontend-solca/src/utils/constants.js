@@ -50,7 +50,7 @@ export const PRIORIDADES = ["Normal", "Preferente", "Urgente"];
 
 export const TIPOS_ESTUDIO = ["Radiografía", "Ecografía", "Tomografía", "Resonancia", "Mamografía", "PET-CT"];
 
-export const FORMATOS_IMAGEN = ["PNG", "DICOM"];
+export const FORMATOS_IMAGEN = ["DICOM", "PNG"];
 
 export const REGIONES_ANATOMICAS = [
   "Cabeza",

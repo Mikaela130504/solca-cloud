@@ -33,6 +33,7 @@ const IMAGE_FORMAT_RULES = {
     error: "Solo se permiten archivos DICOM reales. No use PNG, JPG ni PDF en formato DICOM.",
   },
 };
+const IMAGE_FILE_ACCEPT = ".png,.dcm,.dicom,.ima,image/png,application/dicom";
 
 const resultInitial = {
   formato: DEFAULT_IMAGE_FORMAT,
@@ -141,8 +142,7 @@ export default function Imaging() {
 
   const handleFile = async (event) => {
     const file = event.target.files?.[0];
-    const format = IMAGE_FORMAT_RULES[selectedFormatRef.current] ? selectedFormatRef.current : selectedFormat;
-    const rule = IMAGE_FORMAT_RULES[format];
+    const fallbackFormat = IMAGE_FORMAT_RULES[selectedFormatRef.current] ? selectedFormatRef.current : selectedFormat;
     if (!file) {
       setFileName("");
       setResult((current) => ({ ...current, archivo: null }));
@@ -150,28 +150,35 @@ export default function Imaging() {
     }
 
     const lowerName = file.name.toLowerCase();
-    const extensions = rule.extensions || [rule.extension];
-    const hasExpectedExtension = extensions.some((extension) => lowerName.endsWith(extension));
+    const dicomExtensions = IMAGE_FORMAT_RULES.DICOM.extensions;
+    const hasDicomExtension = dicomExtensions.some((extension) => lowerName.endsWith(extension));
+    const hasPngExtension = lowerName.endsWith(IMAGE_FORMAT_RULES.PNG.extension);
     const hasKnownNonDicomExtension = [".png", ".jpg", ".jpeg", ".pdf"].some((extension) => lowerName.endsWith(extension));
     const header = new Uint8Array(await file.slice(0, Math.max(DICOM_SIGNATURE_OFFSET + 4, PNG_SIGNATURE.length)).arrayBuffer());
-    const isValidPng = format === "PNG" && PNG_SIGNATURE.every((byte, index) => header[index] === byte);
+    const isPngFile = PNG_SIGNATURE.every((byte, index) => header[index] === byte);
     const hasDicomPreamble = header.length >= DICOM_SIGNATURE_OFFSET + 4 && header[DICOM_SIGNATURE_OFFSET] === 68 && header[DICOM_SIGNATURE_OFFSET + 1] === 73 && header[DICOM_SIGNATURE_OFFSET + 2] === 67 && header[DICOM_SIGNATURE_OFFSET + 3] === 77;
-    const isClearlyNotDicom = PNG_SIGNATURE.every((byte, index) => header[index] === byte) || JPEG_SIGNATURE.every((byte, index) => header[index] === byte) || PDF_SIGNATURE.every((byte, index) => header[index] === byte);
-    const isValidDicom = format === "DICOM" && !hasKnownNonDicomExtension && (hasExpectedExtension || hasDicomPreamble || !isClearlyNotDicom);
+    const isClearlyNotDicom = isPngFile || JPEG_SIGNATURE.every((byte, index) => header[index] === byte) || PDF_SIGNATURE.every((byte, index) => header[index] === byte);
+    const looksLikeDicom = !hasKnownNonDicomExtension && (hasDicomExtension || hasDicomPreamble || !isClearlyNotDicom);
+    const detectedFormat = looksLikeDicom ? "DICOM" : isPngFile ? "PNG" : fallbackFormat;
+    const rule = IMAGE_FORMAT_RULES[detectedFormat];
 
-    const invalidPng = format === "PNG" && (!hasExpectedExtension || !isValidPng);
-    const invalidDicom = format === "DICOM" && !isValidDicom;
+    const invalidPng = detectedFormat === "PNG" && (!hasPngExtension || !isPngFile);
+    const invalidDicom = detectedFormat === "DICOM" && !looksLikeDicom;
 
     if (invalidPng || invalidDicom) {
       event.target.value = "";
       setFileName("");
-      setResult((current) => ({ ...current, archivo: null, formato }));
+      setResult((current) => ({ ...current, archivo: null, formato: fallbackFormat }));
       setToast({ message: rule.error, type: "error" });
       return;
     }
 
+    selectedFormatRef.current = detectedFormat;
     setFileName(file.name);
-    setResult((current) => ({ ...current, archivo: file, formato }));
+    setResult((current) => ({ ...current, archivo: file, formato: detectedFormat }));
+    if (detectedFormat !== fallbackFormat) {
+      setToast({ message: `Formato ajustado automáticamente a ${detectedFormat}.`, type: "success" });
+    }
   };
 
   const handleFormatChange = (event) => {
@@ -298,7 +305,7 @@ export default function Imaging() {
               {canProcess && activeStudy.estado !== "INFORMADO" && (
                 <label className="field">
                   <span className="field-label">Archivo diagnóstico</span>
-                  <input key={fileInputKey} className="field-control" type="file" accept={selectedRule.accept} onChange={handleFile} />
+                  <input key={fileInputKey} className="field-control" type="file" accept={IMAGE_FILE_ACCEPT} onChange={handleFile} />
                   <span className="field-hint">{fileName || selectedRule.label}</span>
                 </label>
               )}
