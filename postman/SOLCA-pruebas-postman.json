@@ -80,7 +80,7 @@
         "url": "{{basePacientes}}/pacientes/{{idPacienteRegional}}/historias-locales",
         "body": {
           "mode": "raw",
-          "raw": "{\"sede\":\"SOLCA Guayaquil\",\"identificadorHistoriaLocal\":\"0000001\"}"
+          "raw": "{\"sede\":\"SOLCA Manabí\",\"identificadorHistoriaLocal\":\"0000001\"}"
         }
       }
     },

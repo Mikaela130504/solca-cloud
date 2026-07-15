@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Button from "../../components/common/Button.jsx";
 import Card from "../../components/common/Card.jsx";
 import Input from "../../components/common/Input.jsx";
@@ -13,9 +13,29 @@ import { FORMATOS_IMAGEN, HOSPITAL_BRANCHES } from "../../utils/constants.js";
 import { ROLES } from "../../utils/roles.js";
 
 const ESTADOS_IMAGEN = ["SOLICITADO", "REALIZADO", "INFORMADO"];
+const DEFAULT_IMAGE_FORMAT = "DICOM";
+const DICOM_SIGNATURE_OFFSET = 128;
+const PNG_SIGNATURE = [137, 80, 78, 71, 13, 10, 26, 10];
+const JPEG_SIGNATURE = [255, 216, 255];
+const PDF_SIGNATURE = [37, 80, 68, 70];
+const IMAGE_FORMAT_RULES = {
+  PNG: {
+    accept: ".png,image/png",
+    extension: ".png",
+    label: "Solo archivo PNG .png.",
+    error: "Solo se permiten archivos PNG reales con extensión .png.",
+  },
+  DICOM: {
+    accept: ".dcm,.dicom,application/dicom",
+    extension: ".dcm",
+    extensions: [".dcm", ".dicom"],
+    label: "Solo archivo DICOM .dcm o .dicom.",
+    error: "Solo se permiten archivos DICOM con extensión .dcm o .dicom.",
+  },
+};
 
 const resultInitial = {
-  formato: "",
+  formato: DEFAULT_IMAGE_FORMAT,
   hallazgos: "",
   conclusion: "",
   observaciones: "",
@@ -57,9 +77,13 @@ export default function Imaging() {
   const [filters, setFilters] = useState({ estado: "", sede: "", paciente: "" });
   const [result, setResult] = useState(resultInitial);
   const [fileName, setFileName] = useState("");
+  const [fileInputKey, setFileInputKey] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState({ message: "", type: "success" });
+  const selectedFormatRef = useRef(DEFAULT_IMAGE_FORMAT);
+  const selectedFormat = IMAGE_FORMAT_RULES[result.formato] ? result.formato : DEFAULT_IMAGE_FORMAT;
+  const selectedRule = IMAGE_FORMAT_RULES[selectedFormat];
 
   const filteredStudies = useMemo(() => studies.filter((study) => (
     (!filters.estado || study.estado === filters.estado) &&
@@ -100,8 +124,11 @@ export default function Imaging() {
     }
     setActiveStudy(hydratedStudy);
     setFileName("");
+    setFileInputKey((current) => current + 1);
+    const existingFormat = IMAGE_FORMAT_RULES[hydratedStudy.formato] ? hydratedStudy.formato : DEFAULT_IMAGE_FORMAT;
+    selectedFormatRef.current = existingFormat;
     setResult({
-      formato: hydratedStudy.formato || "DICOM",
+      formato: existingFormat,
       hallazgos: hydratedStudy.hallazgos || "",
       conclusion: hydratedStudy.resultado || "",
       observaciones: hydratedStudy.observacionesImagenologo || "",
@@ -112,10 +139,43 @@ export default function Imaging() {
     });
   };
 
-  const handleFile = (event) => {
+  const handleFile = async (event) => {
     const file = event.target.files?.[0];
-    setFileName(file?.name || "");
-    setResult((current) => ({ ...current, archivo: file || null }));
+    const format = IMAGE_FORMAT_RULES[selectedFormatRef.current] ? selectedFormatRef.current : selectedFormat;
+    const rule = IMAGE_FORMAT_RULES[format];
+    if (!file) {
+      setFileName("");
+      setResult((current) => ({ ...current, archivo: null }));
+      return;
+    }
+
+    const lowerName = file.name.toLowerCase();
+    const extensions = rule.extensions || [rule.extension];
+    const hasExpectedExtension = extensions.some((extension) => lowerName.endsWith(extension));
+    const header = new Uint8Array(await file.slice(0, Math.max(DICOM_SIGNATURE_OFFSET + 4, PNG_SIGNATURE.length)).arrayBuffer());
+    const isValidPng = format === "PNG" && PNG_SIGNATURE.every((byte, index) => header[index] === byte);
+    const hasDicomPreamble = header.length >= DICOM_SIGNATURE_OFFSET + 4 && header[DICOM_SIGNATURE_OFFSET] === 68 && header[DICOM_SIGNATURE_OFFSET + 1] === 73 && header[DICOM_SIGNATURE_OFFSET + 2] === 67 && header[DICOM_SIGNATURE_OFFSET + 3] === 77;
+    const isClearlyNotDicom = PNG_SIGNATURE.every((byte, index) => header[index] === byte) || JPEG_SIGNATURE.every((byte, index) => header[index] === byte) || PDF_SIGNATURE.every((byte, index) => header[index] === byte);
+    const isValidDicom = format === "DICOM" && hasExpectedExtension && (hasDicomPreamble || !isClearlyNotDicom);
+
+    if (!hasExpectedExtension || (!isValidPng && !isValidDicom)) {
+      event.target.value = "";
+      setFileName("");
+      setResult((current) => ({ ...current, archivo: null, formato }));
+      setToast({ message: rule.error, type: "error" });
+      return;
+    }
+
+    setFileName(file.name);
+    setResult((current) => ({ ...current, archivo: file, formato }));
+  };
+
+  const handleFormatChange = (event) => {
+    const formato = event.target.value;
+    selectedFormatRef.current = IMAGE_FORMAT_RULES[formato] ? formato : DEFAULT_IMAGE_FORMAT;
+    setFileName("");
+    setFileInputKey((current) => current + 1);
+    setResult((current) => ({ ...current, formato: selectedFormatRef.current, archivo: null }));
   };
 
   const saveResult = async (event) => {
@@ -141,7 +201,8 @@ export default function Imaging() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `estudio-${study.id}.${(study.formato || "bin").toLowerCase()}`;
+      const extension = IMAGE_FORMAT_RULES[study.formato]?.extension || ".dcm";
+      link.download = `estudio-${study.id}${extension}`;
       link.click();
       URL.revokeObjectURL(url);
     } catch (error) {
@@ -225,7 +286,7 @@ export default function Imaging() {
             <div className="grid grid-3 form-section">
               <Input label="Técnico responsable" name="tecnicoResponsable" value={result.tecnicoResponsable} onChange={(event) => setResult((current) => ({ ...current, tecnicoResponsable: event.target.value }))} readOnly={!canProcess || activeStudy.estado === "INFORMADO"} />
               <Input label="Hora del estudio" type="time" name="hora" value={result.hora} onChange={(event) => setResult((current) => ({ ...current, hora: event.target.value }))} readOnly={!canProcess || activeStudy.estado === "INFORMADO"} />
-              <Select label="Formato final" name="formato" value={result.formato} onChange={(event) => setResult((current) => ({ ...current, formato: event.target.value }))} options={FORMATOS_IMAGEN} disabled={!canProcess || activeStudy.estado === "INFORMADO"} />
+              <Select label="Formato final" name="formato" value={selectedFormat} onChange={handleFormatChange} options={FORMATOS_IMAGEN} includePlaceholder={false} disabled={!canProcess || activeStudy.estado === "INFORMADO"} />
               <Input label="Hallazgos" type="textarea" name="hallazgos" value={result.hallazgos} onChange={(event) => setResult((current) => ({ ...current, hallazgos: event.target.value }))} readOnly={!canProcess || activeStudy.estado === "INFORMADO"} />
               <Input label="Conclusión diagnóstica" type="textarea" name="conclusion" value={result.conclusion} onChange={(event) => setResult((current) => ({ ...current, conclusion: event.target.value }))} readOnly={!canProcess || activeStudy.estado === "INFORMADO"} />
               <Input label="Observaciones del imagenólogo" type="textarea" name="observaciones" value={result.observaciones} onChange={(event) => setResult((current) => ({ ...current, observaciones: event.target.value }))} readOnly={!canProcess || activeStudy.estado === "INFORMADO"} />
@@ -233,8 +294,8 @@ export default function Imaging() {
               {canProcess && activeStudy.estado !== "INFORMADO" && (
                 <label className="field">
                   <span className="field-label">Archivo diagnóstico</span>
-                  <input className="field-control" type="file" accept=".pdf,.jpg,.jpeg,.png,.dcm" onChange={handleFile} />
-                  <span className="field-hint">{fileName || "PDF, imagen o DICOM."}</span>
+                  <input key={fileInputKey} className="field-control" type="file" accept={selectedRule.accept} onChange={handleFile} />
+                  <span className="field-hint">{fileName || selectedRule.label}</span>
                 </label>
               )}
             </div>

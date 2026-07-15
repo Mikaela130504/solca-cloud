@@ -56,6 +56,6 @@ También permite asociar historias clínicas locales de cada sede para mantener 
 | PaaS | Plataforma para aplicaciones Spring Boot | Despliegue de APIs REST |
 | SaaS | GitHub | Repositorio y control de versiones |
 | DBaaS | PostgreSQL Cloud en fase futura | Persistencia administrada en nube |
-| Storage cloud | Almacenamiento de objetos | Archivos DICOM, PDF e informes |
+| Storage cloud | Almacenamiento de objetos | Archivos PNG/DICOM e informes clínicos |
 
 En esta fase de desarrollo local se usa SQLite por microservicio para cumplir la independencia de bases de datos y facilitar la ejecución en Docker.

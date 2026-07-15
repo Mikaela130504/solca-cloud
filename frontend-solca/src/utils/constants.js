@@ -14,7 +14,7 @@ export const ROUTES = {
 
 export const HOSPITAL_BRANCHES = [
   "SOLCA Quito",
-  "SOLCA Guayaquil",
+  "SOLCA Manabí",
   "SOLCA Cuenca",
 ];
 
@@ -50,7 +50,7 @@ export const PRIORIDADES = ["Normal", "Preferente", "Urgente"];
 
 export const TIPOS_ESTUDIO = ["Radiografía", "Ecografía", "Tomografía", "Resonancia", "Mamografía", "PET-CT"];
 
-export const FORMATOS_IMAGEN = ["PDF", "JPG", "PNG", "DICOM"];
+export const FORMATOS_IMAGEN = ["PNG", "DICOM"];
 
 export const REGIONES_ANATOMICAS = [
   "Cabeza",

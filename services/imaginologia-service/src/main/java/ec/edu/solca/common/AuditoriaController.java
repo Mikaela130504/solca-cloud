@@ -20,7 +20,6 @@ public class AuditoriaController {
   @GetMapping
   @PreAuthorize("hasRole('ADMIN')")
   public List<Map<String,Object>> listar() {
-    Auditoria.crearTabla(jdbc);
-    return jdbc.queryForList("SELECT usuario, rol, fecha_hora, accion, paciente, endpoint, ip, modulo, resultado, metodo_http, estado_http, tiempo_respuesta_ms, mensaje FROM auditorias ORDER BY id DESC LIMIT 100");
+    return Auditoria.listar();
   }
 }

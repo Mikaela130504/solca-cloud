@@ -8,7 +8,29 @@ BASE = Path("/data")
 
 
 def db_files():
-    return sorted(p for p in BASE.glob("*.sqlite") if p.is_file())
+    files = []
+    for path in BASE.glob("*.sqlite"):
+        if not path.is_file():
+            continue
+        try:
+            with sqlite3.connect(path) as conn:
+                tables = visible_tables(conn)
+            if tables:
+                files.append(path)
+        except sqlite3.Error:
+            continue
+    return sorted(files, key=lambda p: p.name.lower())
+
+
+def visible_tables(conn):
+    return [
+        r[0]
+        for r in conn.execute(
+            "SELECT name FROM sqlite_master "
+            "WHERE type='table' AND name NOT LIKE 'sqlite_%' "
+            "ORDER BY name"
+        )
+    ]
 
 
 def safe_db(name):
@@ -21,7 +43,7 @@ def safe_db(name):
 def query_rows(db_path, table):
     with sqlite3.connect(db_path) as conn:
         conn.row_factory = sqlite3.Row
-        tables = [r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")]
+        tables = visible_tables(conn)
         if table not in tables:
             table = tables[0] if tables else ""
         rows = []
@@ -30,6 +52,13 @@ def query_rows(db_path, table):
             quoted = '"' + table.replace('"', '""') + '"'
             rows = conn.execute(f"SELECT * FROM {quoted} LIMIT 200").fetchall()
             columns = rows[0].keys() if rows else [r[1] for r in conn.execute(f"PRAGMA table_info({quoted})")]
+            if table == "auditorias":
+                columns = [col for col in columns if col != "id"]
+            if rows:
+                columns = [
+                    col for col in columns
+                    if any(row[col] is not None and str(row[col]).strip() != "" for row in rows)
+                ]
         return tables, table, columns, rows
 
 
@@ -71,7 +100,7 @@ class Handler(BaseHTTPRequestHandler):
           h2 {{ margin-top: 0; color: #0a4770; }}
           .pill {{ display: inline-block; margin: 4px; padding: 8px 10px; border: 1px solid #b9d8ea; border-radius: 999px; color: #0a4770; text-decoration: none; font-weight: 700; }}
           .table-wrap {{ overflow: auto; }}
-          table {{ width: 100%; border-collapse: collapse; }}
+          table {{ min-width: 100%; border-collapse: collapse; }}
           th, td {{ padding: 10px; border-bottom: 1px solid #e3ebf3; text-align: left; white-space: nowrap; }}
           th {{ background: #eef7fd; }}
         </style></head><body>{content}</body></html>"""

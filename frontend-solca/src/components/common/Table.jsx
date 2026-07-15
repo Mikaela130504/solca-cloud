@@ -1,4 +1,11 @@
 export default function Table({ columns, rows, empty = "Sin registros disponibles" }) {
+  const display = (value) => {
+    if (value === null || value === undefined || value === "") return "No disponible";
+    if (typeof value === "boolean") return value ? "Sí" : "No";
+    if (typeof value === "object") return JSON.stringify(value);
+    return String(value);
+  };
+
   return (
     <div className="table-wrap">
       <table className="data-table">
@@ -18,7 +25,7 @@ export default function Table({ columns, rows, empty = "Sin registros disponible
             rows.map((row, index) => (
               <tr key={row.id || index}>
                 {columns.map((column) => (
-                  <td key={column.key}>{row[column.key]}</td>
+                  <td key={column.key}>{display(row[column.key])}</td>
                 ))}
               </tr>
             ))

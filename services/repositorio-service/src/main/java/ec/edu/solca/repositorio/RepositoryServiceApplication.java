@@ -59,8 +59,20 @@ class RepositorioService {
     jdbc.execute("CREATE TABLE IF NOT EXISTS historial_consultas_repositorio (id INTEGER PRIMARY KEY AUTOINCREMENT, paciente TEXT NOT NULL, id_paciente_regional TEXT, usuario TEXT, fecha_hora TEXT NOT NULL, resultado TEXT NOT NULL, servicios_no_disponibles TEXT)");
     jdbc.execute("CREATE TABLE IF NOT EXISTS estado_servicios (id INTEGER PRIMARY KEY AUTOINCREMENT, servicio TEXT NOT NULL UNIQUE, estado TEXT NOT NULL, ultima_revision TEXT NOT NULL, mensaje TEXT)");
     jdbc.execute("CREATE TABLE IF NOT EXISTS logs_integracion (id INTEGER PRIMARY KEY AUTOINCREMENT, servicio TEXT NOT NULL, endpoint TEXT NOT NULL, fecha_hora TEXT NOT NULL, resultado TEXT NOT NULL, tiempo_respuesta_ms INTEGER, mensaje TEXT)");
-    jdbc.execute("CREATE TABLE IF NOT EXISTS cache_clinica (id INTEGER PRIMARY KEY AUTOINCREMENT, id_paciente_regional TEXT NOT NULL UNIQUE, fecha_hora TEXT NOT NULL, resumen TEXT NOT NULL)");
+    jdbc.execute("CREATE TABLE IF NOT EXISTS cache_clinica (id INTEGER PRIMARY KEY AUTOINCREMENT, id_paciente_regional TEXT NOT NULL UNIQUE, fecha_hora TEXT NOT NULL, paciente TEXT, cedula TEXT, sede TEXT, diagnostico_principal TEXT, total_consultas INTEGER DEFAULT 0, total_laboratorios INTEGER DEFAULT 0, total_imagenologia INTEGER DEFAULT 0, servicios_no_disponibles TEXT, resumen TEXT NOT NULL)");
+    agregarColumna("cache_clinica", "paciente", "TEXT");
+    agregarColumna("cache_clinica", "cedula", "TEXT");
+    agregarColumna("cache_clinica", "sede", "TEXT");
+    agregarColumna("cache_clinica", "diagnostico_principal", "TEXT");
+    agregarColumna("cache_clinica", "total_consultas", "INTEGER DEFAULT 0");
+    agregarColumna("cache_clinica", "total_laboratorios", "INTEGER DEFAULT 0");
+    agregarColumna("cache_clinica", "total_imagenologia", "INTEGER DEFAULT 0");
+    agregarColumna("cache_clinica", "servicios_no_disponibles", "TEXT");
     jdbc.execute("CREATE TABLE IF NOT EXISTS configuracion_repositorio (clave TEXT PRIMARY KEY, valor TEXT NOT NULL)");
+  }
+
+  void agregarColumna(String tabla, String columna, String definicion) {
+    try { jdbc.execute("ALTER TABLE " + tabla + " ADD COLUMN " + columna + " " + definicion); } catch (Exception ignored) {}
   }
 
   Map<String,Object> consultar(String paciente, String authorization, HttpServletRequest http) {
@@ -79,6 +91,10 @@ class RepositorioService {
     respuesta.put("serviciosNoDisponibles", noDisponibles);
     guardarHistorial(paciente, idRegional, noDisponibles, http);
     guardarCache(idRegional, respuesta);
+    respuesta.put("estadoServicios", estadoServicios());
+    respuesta.put("logsIntegracion", logsIntegracion());
+    respuesta.put("historialConsultasRepositorio", historialConsultas(idRegional));
+    respuesta.put("cacheClinica", cacheClinica(idRegional));
     Auditoria.registrar(jdbc, "CONSULTA_REPOSITORIO", idRegional, http);
     return respuesta;
   }
@@ -152,18 +168,10 @@ class RepositorioService {
   }
 
   List<Map<String,Object>> auditorias(String authorization) {
-    List<Map<String,Object>> registros = new ArrayList<>();
-    registros.addAll(etiquetar(jdbc.queryForList("SELECT usuario, rol, fecha_hora, accion, paciente, endpoint, ip, modulo, resultado, metodo_http, estado_http, tiempo_respuesta_ms, mensaje FROM auditorias ORDER BY id DESC LIMIT 100"), "Repositorio"));
-    registros.addAll(auditoriasServicio("Autenticación", auth, authorization));
-    registros.addAll(auditoriasServicio("Paciente Maestro", pacientes, authorization));
-    registros.addAll(auditoriasServicio("Consulta Clínica", consultas, authorization));
-    registros.addAll(auditoriasServicio("Laboratorio", laboratorios, authorization));
-    registros.addAll(auditoriasServicio("Imagenología", imagenologia, authorization));
-    registros.sort((a, b) -> String.valueOf(b.getOrDefault("fecha_hora", "")).compareTo(String.valueOf(a.getOrDefault("fecha_hora", ""))));
-    return registros.stream().limit(300).toList();
+    return auditoriasServicio(auth, authorization);
   }
 
-  List<Map<String,Object>> auditoriasServicio(String nombre, String baseUrl, String authorization) {
+  List<Map<String,Object>> auditoriasServicio(String baseUrl, String authorization) {
     try {
       Object body = rest.get().uri(baseUrl + "/auditorias").header(HttpHeaders.AUTHORIZATION, authorization).retrieve().body(Object.class);
       if (body instanceof List<?> list) {
@@ -172,7 +180,6 @@ class RepositorioService {
           if (item instanceof Map<?,?> map) {
             Map<String,Object> row = new LinkedHashMap<>();
             map.forEach((key, value) -> row.put(String.valueOf(key), value));
-            row.put("microservicio", nombre);
             salida.add(row);
           }
         }
@@ -182,17 +189,20 @@ class RepositorioService {
     return List.of();
   }
 
-  List<Map<String,Object>> etiquetar(List<Map<String,Object>> rows, String nombre) {
-    rows.forEach(row -> row.put("microservicio", nombre));
-    return rows;
-  }
-
   List<Map<String,Object>> estadoServicios() {
     return jdbc.queryForList("SELECT servicio, estado, ultima_revision, mensaje FROM estado_servicios ORDER BY servicio");
   }
 
   List<Map<String,Object>> logsIntegracion() {
     return jdbc.queryForList("SELECT servicio, endpoint, fecha_hora, resultado, tiempo_respuesta_ms, mensaje FROM logs_integracion ORDER BY id DESC LIMIT 100");
+  }
+
+  List<Map<String,Object>> historialConsultas(String idRegional) {
+    return jdbc.queryForList("SELECT paciente, id_paciente_regional, usuario, fecha_hora, resultado, servicios_no_disponibles FROM historial_consultas_repositorio WHERE id_paciente_regional=? OR paciente=? ORDER BY id DESC LIMIT 50", idRegional, idRegional);
+  }
+
+  List<Map<String,Object>> cacheClinica(String idRegional) {
+    return jdbc.queryForList("SELECT id_paciente_regional, fecha_hora, paciente, cedula, sede, diagnostico_principal, total_consultas, total_laboratorios, total_imagenologia, servicios_no_disponibles, resumen FROM cache_clinica WHERE id_paciente_regional=? ORDER BY id DESC LIMIT 10", idRegional);
   }
 
   void registrarServicio(String servicio, String estado, String endpoint, String resultado, long tiempoMs, String mensaje) {
@@ -207,6 +217,70 @@ class RepositorioService {
   }
 
   void guardarCache(String idRegional, Map<String,Object> respuesta) {
-    jdbc.update("INSERT INTO cache_clinica(id_paciente_regional, fecha_hora, resumen) VALUES (?,?,?) ON CONFLICT(id_paciente_regional) DO UPDATE SET fecha_hora=excluded.fecha_hora, resumen=excluded.resumen", idRegional, LocalDateTime.now().toString(), respuesta.toString());
+    Map<String,Object> paciente = comoMapa(respuesta.get("paciente"));
+    List<?> consultas = comoLista(respuesta.get("consultas"));
+    List<?> laboratorios = comoLista(respuesta.get("laboratorios"));
+    List<?> imagenologia = comoLista(respuesta.get("imagenologia"));
+    List<?> noDisponibles = comoLista(respuesta.get("serviciosNoDisponibles"));
+    String nombrePaciente = nombrePaciente(paciente, idRegional);
+    String cedula = valor(paciente, "cedula");
+    String sede = primerValorNoVacio(valor(paciente, "sede"), primerCampo(consultas, "sede"), primerCampo(laboratorios, "sede"), primerCampo(imagenologia, "sede"));
+    String diagnostico = primerValorNoVacio(primerCampo(consultas, "diagnostico"), primerCampo(laboratorios, "diagnostico"), primerCampo(imagenologia, "diagnostico"));
+    String servicios = String.join(", ", noDisponibles.stream().map(String::valueOf).filter(v -> !v.isBlank()).toList());
+    String resumen = "Paciente " + nombrePaciente + " con " + consultas.size() + " consultas, " + laboratorios.size() + " laboratorios y " + imagenologia.size() + " estudios de imagen.";
+    jdbc.update("""
+      INSERT INTO cache_clinica(id_paciente_regional, fecha_hora, paciente, cedula, sede, diagnostico_principal, total_consultas, total_laboratorios, total_imagenologia, servicios_no_disponibles, resumen)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?)
+      ON CONFLICT(id_paciente_regional) DO UPDATE SET
+        fecha_hora=excluded.fecha_hora,
+        paciente=excluded.paciente,
+        cedula=excluded.cedula,
+        sede=excluded.sede,
+        diagnostico_principal=excluded.diagnostico_principal,
+        total_consultas=excluded.total_consultas,
+        total_laboratorios=excluded.total_laboratorios,
+        total_imagenologia=excluded.total_imagenologia,
+        servicios_no_disponibles=excluded.servicios_no_disponibles,
+        resumen=excluded.resumen
+      """, idRegional, LocalDateTime.now().toString(), nombrePaciente, cedula, sede, diagnostico, consultas.size(), laboratorios.size(), imagenologia.size(), servicios, resumen);
+  }
+
+  Map<String,Object> comoMapa(Object value) {
+    if (!(value instanceof Map<?,?> map)) return new LinkedHashMap<>();
+    Map<String,Object> salida = new LinkedHashMap<>();
+    map.forEach((key, item) -> salida.put(String.valueOf(key), item));
+    return salida;
+  }
+
+  List<?> comoLista(Object value) {
+    return value instanceof List<?> list ? list : List.of();
+  }
+
+  String nombrePaciente(Map<String,Object> paciente, String idRegional) {
+    String nombres = valor(paciente, "nombres");
+    String apellidos = valor(paciente, "apellidos");
+    String completo = (nombres + " " + apellidos).trim();
+    return completo.isBlank() ? idRegional : completo;
+  }
+
+  String valor(Map<String,Object> map, String campo) {
+    Object value = map.get(campo);
+    return value == null ? "" : String.valueOf(value).trim();
+  }
+
+  String primerCampo(List<?> rows, String campo) {
+    for (Object row : rows) {
+      Map<String,Object> map = comoMapa(row);
+      String value = valor(map, campo);
+      if (!value.isBlank()) return value;
+    }
+    return "";
+  }
+
+  String primerValorNoVacio(String... values) {
+    for (String value : values) {
+      if (value != null && !value.isBlank()) return value;
+    }
+    return "";
   }
 }

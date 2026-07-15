@@ -15,6 +15,7 @@ export default function PatientSummary({ patient }) {
     ["Seguro", patient.seguro],
     ["Sede", patient.sede],
   ];
+  const display = (value) => (value === null || value === undefined || value === "" ? "No disponible" : value);
 
   return (
     <Card title="Información del paciente" subtitle="Datos maestros consolidados">
@@ -22,7 +23,7 @@ export default function PatientSummary({ patient }) {
         {items.map(([label, value]) => (
           <div key={label}>
             <dt>{label}</dt>
-            <dd>{value}</dd>
+            <dd>{display(value)}</dd>
           </div>
         ))}
       </dl>

@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import Button from "../../components/common/Button.jsx";
+import Card from "../../components/common/Card.jsx";
 import Loader from "../../components/common/Loader.jsx";
 import PatientAutocomplete from "../../components/common/PatientAutocomplete.jsx";
 import PatientIdentifiers from "../../components/common/PatientIdentifiers.jsx";
+import Table from "../../components/common/Table.jsx";
 import ClinicalHistoryView from "../../components/repository/ClinicalHistoryView.jsx";
 import ExpandableRecords from "../../components/repository/ExpandableRecords.jsx";
 import PatientSummary from "../../components/repository/PatientSummary.jsx";
@@ -15,6 +17,10 @@ function isClinicalHistory(record) {
 
 function sortByRecentDate(records) {
   return [...records].sort((left, right) => new Date(right.fecha || 0) - new Date(left.fecha || 0));
+}
+
+function rowsFrom(value) {
+  return Array.isArray(value) ? value : [];
 }
 
 export default function Repository() {
@@ -47,6 +53,11 @@ export default function Repository() {
   const clinicalHistory = data?.history || data?.historiaClinica || clinicalHistories[0] || null;
   const laboratories = Array.isArray(data?.laboratories || data?.laboratorios || data?.laboratorio) ? data.laboratories || data.laboratorios || data.laboratorio : [];
   const imaging = Array.isArray(data?.imaging || data?.imagenologia || data?.imagenes) ? data.imaging || data.imagenologia || data.imagenes : [];
+  const unavailableServices = rowsFrom(data?.serviciosNoDisponibles || data?.servicesUnavailable);
+  const serviceStatus = rowsFrom(data?.estadoServicios);
+  const integrationLogs = rowsFrom(data?.logsIntegracion);
+  const repositoryHistory = rowsFrom(data?.historialConsultasRepositorio);
+  const clinicalCache = rowsFrom(data?.cacheClinica);
 
   if (loading) {
     return <Loader />;
@@ -70,12 +81,67 @@ export default function Repository() {
 
       {data && (
         <>
+          {unavailableServices.length > 0 && (
+            <div className="repository-alert">
+              Servicios no disponibles: {unavailableServices.join(", ")}
+            </div>
+          )}
+
           <div className="grid grid-2 repository-main">
             <PatientSummary patient={patient} />
             <ClinicalHistoryView history={clinicalHistory} historiasLocales={patient?.historiasLocales || []} />
           </div>
 
           <ExpandableRecords clinicalHistories={clinicalHistories} consultations={consultations} laboratories={laboratories} imaging={imaging} />
+
+          <div className="repository-ops">
+            <Card title="Estado de servicios">
+              <Table
+                columns={[
+                  { key: "servicio", label: "Servicio" },
+                  { key: "estado", label: "Estado" },
+                  { key: "ultima_revision", label: "Última revisión" },
+                  { key: "mensaje", label: "Mensaje" },
+                ]}
+                rows={serviceStatus}
+              />
+            </Card>
+            <Card title="Logs de integración">
+              <Table
+                columns={[
+                  { key: "servicio", label: "Servicio" },
+                  { key: "endpoint", label: "Endpoint" },
+                  { key: "resultado", label: "Resultado" },
+                  { key: "tiempo_respuesta_ms", label: "Tiempo ms" },
+                  { key: "mensaje", label: "Mensaje" },
+                ]}
+                rows={integrationLogs}
+              />
+            </Card>
+            <Card title="Historial de consultas al repositorio">
+              <Table
+                columns={[
+                  { key: "paciente", label: "Paciente consultado" },
+                  { key: "id_paciente_regional", label: "ID regional" },
+                  { key: "usuario", label: "Usuario" },
+                  { key: "fecha_hora", label: "Fecha y hora" },
+                  { key: "resultado", label: "Resultado" },
+                  { key: "servicios_no_disponibles", label: "Servicios no disponibles" },
+                ]}
+                rows={repositoryHistory}
+              />
+            </Card>
+            <Card title="Cache clínica">
+              <Table
+                columns={[
+                  { key: "id_paciente_regional", label: "ID regional" },
+                  { key: "fecha_hora", label: "Fecha y hora" },
+                  { key: "resumen", label: "Resumen" },
+                ]}
+                rows={clinicalCache}
+              />
+            </Card>
+          </div>
         </>
       )}
     </>

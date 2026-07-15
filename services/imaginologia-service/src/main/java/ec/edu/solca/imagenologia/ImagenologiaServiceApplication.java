@@ -25,8 +25,8 @@ public class ImagenologiaServiceApplication {
   @Bean CommandLineRunner schema(RegistroRepository repo) { return args -> repo.schema(); }
 }
 
-record RegistroDto(Long id, String idPacienteRegional, String cedula, LocalDate fecha, String sede, String medico, String especialidad, String tipoConsulta, String diagnostico, String tratamiento, String motivo, String evolucion, String tipoExamen, String resultado, String observaciones, String tipoEstudio, String formato, String url, String regionAnatomica, String estado, String prioridad, String tecnicoResponsable, LocalTime hora, LocalDateTime fechaSolicitud, LocalDateTime fechaRealizacion, String observacionesImagenologo, String hallazgos, String recomendaciones, Long consultaId) {}
-record RegistroRequest(@NotBlank String cedula, String idPacienteRegional, @NotNull LocalDate fecha, @NotBlank String sede, String medico, String especialidad, String tipoConsulta, String diagnostico, String tratamiento, String motivo, String evolucion, String tipoExamen, String resultado, String observaciones, String tipoEstudio, String formato, String url, String regionAnatomica, String estado, String prioridad, String tecnicoResponsable, String hora, String observacionesImagenologo, String hallazgos, String recomendaciones, Long consultaId) {}
+record RegistroDto(Long id, String idPacienteRegional, String cedula, LocalDate fecha, String sede, String medico, String especialidad, String tipoConsulta, String diagnostico, String resultado, String observaciones, String tipoEstudio, String formato, String url, String regionAnatomica, String estado, String prioridad, String tecnicoResponsable, LocalTime hora, LocalDateTime fechaSolicitud, LocalDateTime fechaRealizacion, String observacionesImagenologo, String hallazgos, String recomendaciones, Long consultaId) {}
+record RegistroRequest(@NotBlank String cedula, String idPacienteRegional, @NotNull LocalDate fecha, @NotBlank String sede, String medico, String especialidad, String tipoConsulta, String diagnostico, String resultado, String observaciones, String tipoEstudio, String formato, String url, String regionAnatomica, String estado, String prioridad, String tecnicoResponsable, String hora, String observacionesImagenologo, String hallazgos, String recomendaciones, Long consultaId) {}
 
 @RestController
 @RequestMapping("/imagenologia")
@@ -63,16 +63,15 @@ class RegistroController {
     @RequestParam(required=false, name="archivo") MultipartFile archivo,
     HttpServletRequest http
   ) throws Exception {
+    String formatoNormalizado = normalizarFormatoArchivo(formato);
     String url = null;
     if (archivo != null && !archivo.isEmpty()) {
       Path dir = Paths.get("/data/archivos");
       Files.createDirectories(dir);
-      String fileName = System.currentTimeMillis() + "-" + archivo.getOriginalFilename().replaceAll("[^A-Za-z0-9._-]", "_");
-      Path target = dir.resolve(fileName);
-      archivo.transferTo(target);
+      Path target = archivoImagenDestino(dir, archivo, formatoNormalizado);
       url = target.toString();
     }
-    return service.crear(new RegistroRequest(cedula, idPacienteRegional, LocalDate.parse(fecha), sede, medico, especialidad, tipoConsulta, diagnostico, null, null, null, null, resultado, observaciones, tipoEstudio, formato, url, regionAnatomica, estado, prioridad, tecnicoResponsable, hora, observacionesImagenologo, hallazgos, recomendaciones, consultaId), http);
+    return service.crear(new RegistroRequest(cedula, idPacienteRegional, LocalDate.parse(fecha), sede, medico, especialidad, tipoConsulta, diagnostico, resultado, observaciones, tipoEstudio, formatoNormalizado, url, regionAnatomica, estado, prioridad, tecnicoResponsable, hora, observacionesImagenologo, hallazgos, recomendaciones, consultaId), http);
   }
   @PutMapping("/{id}") @PreAuthorize("hasAnyRole('ADMIN','IMAGENOLOGIA')") RegistroDto editar(@PathVariable("id") Long id, @Valid @RequestBody RegistroRequest request, HttpServletRequest http) { return service.editar(id, request, http); }
   @PutMapping(value="/{id}/resultado", consumes = MediaType.APPLICATION_JSON_VALUE) @PreAuthorize("hasAnyRole('ADMIN','IMAGENOLOGIA')") RegistroDto registrarResultado(@PathVariable("id") Long id, @Valid @RequestBody RegistroRequest request, HttpServletRequest http) { return service.registrarResultado(id, request, http); }
@@ -89,21 +88,42 @@ class RegistroController {
     @RequestParam(required=false, name="archivo") MultipartFile archivo,
     HttpServletRequest http
   ) throws Exception {
+    String formatoNormalizado = normalizarFormatoArchivo(formato);
     String url = null;
     if (archivo != null && !archivo.isEmpty()) {
       Path dir = Paths.get("/data/archivos");
       Files.createDirectories(dir);
-      String original = archivo.getOriginalFilename() == null ? "estudio.bin" : archivo.getOriginalFilename();
-      String fileName = System.currentTimeMillis() + "-" + original.replaceAll("[^A-Za-z0-9._-]", "_");
-      Path target = dir.resolve(fileName);
-      archivo.transferTo(target);
+      Path target = archivoImagenDestino(dir, archivo, formatoNormalizado);
       url = target.toString();
     }
     RegistroDto actual = service.obtener(id);
-    return service.registrarResultado(id, new RegistroRequest(actual.cedula(), actual.idPacienteRegional(), actual.fecha(), actual.sede(), actual.medico(), actual.especialidad(), actual.tipoConsulta(), actual.diagnostico(), actual.tratamiento(), actual.motivo(), actual.evolucion(), actual.tipoExamen(), resultado, actual.observaciones(), actual.tipoEstudio(), formato, url, actual.regionAnatomica(), "REALIZADO", actual.prioridad(), tecnicoResponsable, hora, observacionesImagenologo == null ? observaciones : observacionesImagenologo, hallazgos, recomendaciones, actual.consultaId()), http);
+    return service.registrarResultado(id, new RegistroRequest(actual.cedula(), actual.idPacienteRegional(), actual.fecha(), actual.sede(), actual.medico(), actual.especialidad(), actual.tipoConsulta(), actual.diagnostico(), resultado, actual.observaciones(), actual.tipoEstudio(), formatoNormalizado, url == null ? actual.url() : url, actual.regionAnatomica(), "REALIZADO", actual.prioridad(), tecnicoResponsable, hora, observacionesImagenologo == null ? observaciones : observacionesImagenologo, hallazgos, recomendaciones, actual.consultaId()), http);
   }
   @PutMapping("/{id}/estado/{estado}") @PreAuthorize("hasAnyRole('ADMIN','IMAGENOLOGIA')") RegistroDto cambiarEstado(@PathVariable("id") Long id, @PathVariable("estado") String estado, HttpServletRequest http) { return service.cambiarEstado(id, estado, http); }
   @DeleteMapping("/{id}") @ResponseStatus(HttpStatus.NO_CONTENT) @PreAuthorize("hasAnyRole('ADMIN','IMAGENOLOGIA')") void eliminar(@PathVariable("id") Long id, HttpServletRequest http) { service.eliminar(id, http); }
+
+  private String normalizarFormatoArchivo(String formato) {
+    String value = formato == null || formato.isBlank() ? "DICOM" : formato.trim().toUpperCase(Locale.ROOT);
+    if (List.of("PNG", "DICOM").contains(value)) return value;
+    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Formato inválido. Use PNG o DICOM.");
+  }
+
+  private Path archivoImagenDestino(Path dir, MultipartFile archivo, String formato) throws Exception {
+    String original = archivo.getOriginalFilename() == null ? "" : archivo.getOriginalFilename();
+    String lower = original.toLowerCase(Locale.ROOT);
+    boolean extensionValida = "PNG".equals(formato) ? lower.endsWith(".png") : lower.endsWith(".dcm") || lower.endsWith(".dicom");
+    if (!extensionValida) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El archivo no coincide con el formato seleccionado " + formato + ".");
+    }
+    byte[] bytes = archivo.getBytes();
+    if ("PNG".equals(formato) && (bytes.length < 8 || bytes[0] != (byte) 137 || bytes[1] != 'P' || bytes[2] != 'N' || bytes[3] != 'G' || bytes[4] != 13 || bytes[5] != 10 || bytes[6] != 26 || bytes[7] != 10)) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El archivo no tiene cabecera PNG válida.");
+    }
+    String fileName = System.currentTimeMillis() + "-" + original.replaceAll("[^A-Za-z0-9._-]", "_");
+    Path target = dir.resolve(fileName);
+    Files.write(target, bytes);
+    return target;
+  }
 }
 
 @org.springframework.stereotype.Service
@@ -137,8 +157,8 @@ class RegistroRepository {
   RegistroRepository(JdbcTemplate jdbc) { this.jdbc = jdbc; }
   JdbcTemplate jdbc() { return jdbc; }
   void schema() {
-    jdbc.execute("CREATE TABLE IF NOT EXISTS estudios_imagenologia (id INTEGER PRIMARY KEY AUTOINCREMENT, id_paciente_regional TEXT, cedula TEXT NOT NULL, fecha TEXT NOT NULL, sede TEXT NOT NULL, medico TEXT, especialidad TEXT, tipo_consulta TEXT, diagnostico TEXT, tratamiento TEXT, motivo TEXT, evolucion TEXT, tipo_examen TEXT, resultado TEXT, observaciones TEXT, tipo_estudio TEXT, formato TEXT, url TEXT, region_anatomica TEXT)");
-    jdbc.update("UPDATE estudios_imagenologia SET sede='SOLCA Quito' WHERE sede IS NULL OR TRIM(sede) = '' OR sede NOT IN ('SOLCA Cuenca','SOLCA Quito','SOLCA Guayaquil')");
+    jdbc.execute("CREATE TABLE IF NOT EXISTS estudios_imagenologia (id INTEGER PRIMARY KEY AUTOINCREMENT, id_paciente_regional TEXT, cedula TEXT NOT NULL, fecha TEXT NOT NULL, sede TEXT NOT NULL, medico TEXT, especialidad TEXT, tipo_consulta TEXT, diagnostico TEXT, resultado TEXT, observaciones TEXT, tipo_estudio TEXT, formato TEXT, url TEXT, region_anatomica TEXT)");
+    jdbc.update("UPDATE estudios_imagenologia SET sede='SOLCA Quito' WHERE sede IS NULL OR TRIM(sede) = '' OR sede NOT IN ('SOLCA Cuenca','SOLCA Quito','SOLCA Manabí')");
     agregarColumna("estudios_imagenologia", "estado", "TEXT DEFAULT 'SOLICITADO'");
     agregarColumna("estudios_imagenologia", "prioridad", "TEXT DEFAULT 'NORMAL'");
     agregarColumna("estudios_imagenologia", "observaciones_imagenologo", "TEXT");
@@ -165,26 +185,32 @@ class RegistroRepository {
     Integer existe = jdbc.queryForObject("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='registros'", Integer.class);
     if (existe != null && existe > 0) {
       try {
-        jdbc.execute("INSERT OR IGNORE INTO " + destino + "(id_paciente_regional,cedula,fecha,sede,medico,especialidad,tipo_consulta,diagnostico,tratamiento,motivo,evolucion,tipo_examen,resultado,observaciones,tipo_estudio,formato,url,region_anatomica) SELECT id_paciente_regional,cedula,fecha,sede,medico,especialidad,tipo_consulta,diagnostico,tratamiento,motivo,evolucion,tipo_examen,resultado,observaciones,tipo_estudio,formato,url,region_anatomica FROM registros");
+        jdbc.execute("INSERT OR IGNORE INTO " + destino + "(id_paciente_regional,cedula,fecha,sede,medico,especialidad,tipo_consulta,diagnostico,resultado,observaciones,tipo_estudio,formato,url,region_anatomica) SELECT id_paciente_regional,cedula,fecha,sede,medico,especialidad,tipo_consulta,diagnostico,resultado,observaciones,tipo_estudio,formato,url,region_anatomica FROM registros");
       } catch (Exception ignored) {}
     }
   }
   RegistroDto crear(RegistroRequest r) {
     String estado = normalizarEstado(r.estado(), r.url(), r.resultado());
+    String formato = normalizarFormato(r.formato());
+    validarUrlArchivo(formato, r.url());
     String fechaRealizacion = "REALIZADO".equals(estado) || "INFORMADO".equals(estado) ? LocalDateTime.now().toString() : null;
-    jdbc.update("INSERT INTO estudios_imagenologia(id_paciente_regional,cedula,fecha,sede,medico,especialidad,tipo_consulta,diagnostico,tratamiento,motivo,evolucion,tipo_examen,resultado,observaciones,tipo_estudio,formato,url,region_anatomica,estado,prioridad,tecnico_responsable,hora,fecha_solicitud,fecha_realizacion,observaciones_imagenologo,hallazgos,recomendaciones,consulta_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", normalizarPaciente(r),r.cedula(),r.fecha().toString(),r.sede(),r.medico(),r.especialidad(),r.tipoConsulta(),r.diagnostico(),r.tratamiento(),r.motivo(),r.evolucion(),r.tipoExamen(),r.resultado(),r.observaciones(),r.tipoEstudio(),r.formato(),r.url(),r.regionAnatomica(),estado,normalizarPrioridad(r.prioridad()),r.tecnicoResponsable(),normalizarHora(r.hora()),LocalDateTime.now().toString(),fechaRealizacion,r.observacionesImagenologo(),r.hallazgos(),r.recomendaciones(),r.consultaId());
+    jdbc.update("INSERT INTO estudios_imagenologia(id_paciente_regional,cedula,fecha,sede,medico,especialidad,tipo_consulta,diagnostico,resultado,observaciones,tipo_estudio,formato,url,region_anatomica,estado,prioridad,tecnico_responsable,hora,fecha_solicitud,fecha_realizacion,observaciones_imagenologo,hallazgos,recomendaciones,consulta_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", normalizarPaciente(r),r.cedula(),r.fecha().toString(),r.sede(),r.medico(),r.especialidad(),r.tipoConsulta(),r.diagnostico(),r.resultado(),r.observaciones(),r.tipoEstudio(),formato,r.url(),r.regionAnatomica(),estado,normalizarPrioridad(r.prioridad()),r.tecnicoResponsable(),normalizarHora(r.hora()),LocalDateTime.now().toString(),fechaRealizacion,r.observacionesImagenologo(),r.hallazgos(),r.recomendaciones(),r.consultaId());
     Long id = jdbc.queryForObject("SELECT last_insert_rowid()", Long.class);
     return obtener(id).orElseThrow();
   }
   RegistroDto editar(Long id, RegistroRequest r) {
     String estado = normalizarEstado(r.estado(), r.url(), r.resultado());
+    String formato = normalizarFormato(r.formato());
+    validarUrlArchivo(formato, r.url());
     String fechaRealizacion = "REALIZADO".equals(estado) || "INFORMADO".equals(estado) ? LocalDateTime.now().toString() : null;
-    int rows = jdbc.update("UPDATE estudios_imagenologia SET id_paciente_regional=?,cedula=?,fecha=?,sede=?,medico=?,especialidad=?,tipo_consulta=?,diagnostico=?,tratamiento=?,motivo=?,evolucion=?,tipo_examen=?,resultado=?,observaciones=?,tipo_estudio=?,formato=?,url=?,region_anatomica=?,estado=?,prioridad=?,tecnico_responsable=?,hora=?,fecha_realizacion=COALESCE(?,fecha_realizacion),observaciones_imagenologo=?,hallazgos=?,recomendaciones=?,consulta_id=? WHERE id=?", normalizarPaciente(r),r.cedula(),r.fecha().toString(),r.sede(),r.medico(),r.especialidad(),r.tipoConsulta(),r.diagnostico(),r.tratamiento(),r.motivo(),r.evolucion(),r.tipoExamen(),r.resultado(),r.observaciones(),r.tipoEstudio(),r.formato(),r.url(),r.regionAnatomica(),estado,normalizarPrioridad(r.prioridad()),r.tecnicoResponsable(),normalizarHora(r.hora()),fechaRealizacion,r.observacionesImagenologo(),r.hallazgos(),r.recomendaciones(),r.consultaId(),id);
+    int rows = jdbc.update("UPDATE estudios_imagenologia SET id_paciente_regional=?,cedula=?,fecha=?,sede=?,medico=?,especialidad=?,tipo_consulta=?,diagnostico=?,resultado=?,observaciones=?,tipo_estudio=?,formato=?,url=?,region_anatomica=?,estado=?,prioridad=?,tecnico_responsable=?,hora=?,fecha_realizacion=COALESCE(?,fecha_realizacion),observaciones_imagenologo=?,hallazgos=?,recomendaciones=?,consulta_id=? WHERE id=?", normalizarPaciente(r),r.cedula(),r.fecha().toString(),r.sede(),r.medico(),r.especialidad(),r.tipoConsulta(),r.diagnostico(),r.resultado(),r.observaciones(),r.tipoEstudio(),formato,r.url(),r.regionAnatomica(),estado,normalizarPrioridad(r.prioridad()),r.tecnicoResponsable(),normalizarHora(r.hora()),fechaRealizacion,r.observacionesImagenologo(),r.hallazgos(),r.recomendaciones(),r.consultaId(),id);
     if (rows == 0) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Registro no encontrado.");
     return obtener(id).orElseThrow();
   }
   RegistroDto registrarResultado(Long id, RegistroRequest r) {
-    int rows = jdbc.update("UPDATE estudios_imagenologia SET resultado=?, observaciones_imagenologo=?, hallazgos=?, recomendaciones=?, formato=?, url=?, estado=?, tecnico_responsable=?, hora=?, fecha_realizacion=? WHERE id=?", r.resultado(), r.observacionesImagenologo(), r.hallazgos(), r.recomendaciones(), r.formato(), r.url(), normalizarEstado(r.estado() == null ? "REALIZADO" : r.estado(), r.url(), r.resultado()), r.tecnicoResponsable(), normalizarHora(r.hora()), LocalDateTime.now().toString(), id);
+    String formato = normalizarFormato(r.formato());
+    validarUrlArchivo(formato, r.url());
+    int rows = jdbc.update("UPDATE estudios_imagenologia SET resultado=?, observaciones_imagenologo=?, hallazgos=?, recomendaciones=?, formato=?, url=?, estado=?, tecnico_responsable=?, hora=?, fecha_realizacion=? WHERE id=?", r.resultado(), r.observacionesImagenologo(), r.hallazgos(), r.recomendaciones(), formato, r.url(), normalizarEstado(r.estado() == null ? "REALIZADO" : r.estado(), r.url(), r.resultado()), r.tecnicoResponsable(), normalizarHora(r.hora()), LocalDateTime.now().toString(), id);
     if (rows == 0) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Registro no encontrado.");
     return obtener(id).orElseThrow();
   }
@@ -206,6 +232,17 @@ class RegistroRepository {
   String normalizarPaciente(RegistroRequest r) { return r.idPacienteRegional() == null || r.idPacienteRegional().isBlank() ? r.cedula() : r.idPacienteRegional(); }
   String filtro(String value) { return value == null ? "" : value.trim(); }
   String normalizarHora(String value) { return value == null || value.isBlank() ? LocalTime.now().toString().substring(0, 5) : value; }
+  String normalizarFormato(String formato) {
+    String value = formato == null || formato.isBlank() ? "DICOM" : formato.trim().toUpperCase(Locale.ROOT);
+    if (List.of("PNG", "DICOM").contains(value)) return value;
+    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Formato inválido. Use PNG o DICOM.");
+  }
+  void validarUrlArchivo(String formato, String url) {
+    if (url == null || url.isBlank()) return;
+    String lower = url.toLowerCase(Locale.ROOT);
+    if ("PNG".equals(formato) && !lower.endsWith(".png")) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La URL del archivo PNG debe terminar en .png.");
+    if ("DICOM".equals(formato) && !(lower.endsWith(".dcm") || lower.endsWith(".dicom"))) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La URL del archivo DICOM debe terminar en .dcm o .dicom.");
+  }
   String normalizarPrioridad(String prioridad) { return prioridad == null || prioridad.isBlank() ? "NORMAL" : prioridad.trim().toUpperCase(Locale.ROOT); }
   String normalizarEstado(String estado, String url, String resultado) { return estado == null || estado.isBlank() ? ((url != null && !url.isBlank()) || (resultado != null && !resultado.isBlank()) ? "REALIZADO" : "SOLICITADO") : validarEstado(estado); }
   String validarEstado(String estado) {
@@ -215,14 +252,14 @@ class RegistroRepository {
   }
   LocalDateTime parseDateTime(String value) { return value == null || value.isBlank() ? null : LocalDateTime.parse(value); }
   LocalTime parseTime(String value) { return value == null || value.isBlank() ? null : LocalTime.parse(value); }
-  RegistroDto map(java.sql.ResultSet rs, int row) throws java.sql.SQLException { return new RegistroDto(rs.getLong("id"),rs.getString("id_paciente_regional"),rs.getString("cedula"),LocalDate.parse(rs.getString("fecha")),rs.getString("sede"),rs.getString("medico"),rs.getString("especialidad"),rs.getString("tipo_consulta"),rs.getString("diagnostico"),rs.getString("tratamiento"),rs.getString("motivo"),rs.getString("evolucion"),rs.getString("tipo_examen"),rs.getString("resultado"),rs.getString("observaciones"),rs.getString("tipo_estudio"),rs.getString("formato"),rs.getString("url"),rs.getString("region_anatomica"),rs.getString("estado"),rs.getString("prioridad"),rs.getString("tecnico_responsable"),parseTime(rs.getString("hora")),parseDateTime(rs.getString("fecha_solicitud")),parseDateTime(rs.getString("fecha_realizacion")),rs.getString("observaciones_imagenologo"),rs.getString("hallazgos"),rs.getString("recomendaciones"),rs.getObject("consulta_id") == null ? null : rs.getLong("consulta_id")); }
+  RegistroDto map(java.sql.ResultSet rs, int row) throws java.sql.SQLException { return new RegistroDto(rs.getLong("id"),rs.getString("id_paciente_regional"),rs.getString("cedula"),LocalDate.parse(rs.getString("fecha")),rs.getString("sede"),rs.getString("medico"),rs.getString("especialidad"),rs.getString("tipo_consulta"),rs.getString("diagnostico"),rs.getString("resultado"),rs.getString("observaciones"),rs.getString("tipo_estudio"),rs.getString("formato"),rs.getString("url"),rs.getString("region_anatomica"),rs.getString("estado"),rs.getString("prioridad"),rs.getString("tecnico_responsable"),parseTime(rs.getString("hora")),parseDateTime(rs.getString("fecha_solicitud")),parseDateTime(rs.getString("fecha_realizacion")),rs.getString("observaciones_imagenologo"),rs.getString("hallazgos"),rs.getString("recomendaciones"),rs.getObject("consulta_id") == null ? null : rs.getLong("consulta_id")); }
 }
 
 class Sedes {
-  static final List<String> OFICIALES = List.of("SOLCA Cuenca", "SOLCA Quito", "SOLCA Guayaquil");
+  static final List<String> OFICIALES = List.of("SOLCA Cuenca", "SOLCA Quito", "SOLCA Manabí");
   static void validar(String sede) {
     if (sede == null || !OFICIALES.contains(sede.trim())) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sede inválida. Use SOLCA Cuenca, SOLCA Quito o SOLCA Guayaquil.");
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sede inválida. Use SOLCA Cuenca, SOLCA Quito o SOLCA Manabí.");
     }
   }
 }

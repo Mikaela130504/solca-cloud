@@ -47,17 +47,31 @@ export async function updateLaboratoryState(id, estado) {
 }
 
 export async function saveLaboratoryResult(id, result) {
-  const { data } = await api.put(`/laboratorios/${id}/resultado`, {
-    ...result,
+  const payload = {
     cedula: result.cedula || "0000000000",
     idPacienteRegional: result.idPacienteRegional,
     fecha: result.fecha,
     sede: result.sede,
+    medico: result.medico,
+    especialidad: result.especialidad,
+    tipoConsulta: result.tipoConsulta,
+    diagnostico: result.diagnostico,
+    tipoExamen: result.tipoExamen,
+    resultado: result.resultado,
+    observaciones: result.observaciones,
+    estado: result.estado,
+    prioridad: result.prioridad,
+    tecnologoResponsable: result.tecnologoResponsable,
     codigoMuestra: result.codigoMuestra,
+    tipoResultado: result.tipoResultado,
     resultadoCritico: result.resultadoCritico,
     valores: result.valores,
+    unidad: result.unidad,
+    valorReferencia: result.valorReferencia,
     interpretacion: result.interpretacion,
     observacionesLaboratorio: result.observacionesLaboratorio,
-  });
+    consultaId: result.consultaId,
+  };
+  const { data } = await api.put(`/laboratorios/${id}/resultado`, payload);
   return data;
 }

@@ -54,8 +54,8 @@ Datos estructurados:
 
 Datos no estructurados:
 
-- Informes PDF.
-- Imágenes JPG o PNG.
+- Informes clínicos.
+- Imágenes PNG y estudios DICOM.
 - Archivos DICOM.
 - Documentos clínicos adjuntos.
 

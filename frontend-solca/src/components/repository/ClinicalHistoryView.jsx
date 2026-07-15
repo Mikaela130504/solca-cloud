@@ -2,6 +2,7 @@ import Card from "../common/Card.jsx";
 
 export default function ClinicalHistoryView({ history, historiasLocales = [] }) {
   const current = history || {};
+  const display = (value) => (value === null || value === undefined || value === "" ? "No disponible" : value);
   return (
     <Card title="Historia clínica" subtitle="Resumen longitudinal no editable">
       <div className="history-readonly">
@@ -10,7 +11,7 @@ export default function ClinicalHistoryView({ history, historiasLocales = [] }) 
           <p>
             {historiasLocales.length > 0
               ? historiasLocales.map((item) => `${item.sede}: ${item.identificadorHistoriaLocal}`).join(" · ")
-              : "Pendiente de sincronización"}
+              : "No disponible"}
           </p>
         </article>
         {historiasLocales.length > 0 && (
@@ -27,15 +28,15 @@ export default function ClinicalHistoryView({ history, historiasLocales = [] }) 
         )}
         <article>
           <span>Diagnóstico principal</span>
-          <p>{current.diagnosticoPrincipal || current.diagnostico || "Sin registro"}</p>
+          <p>{display(current.diagnosticoPrincipal || current.diagnostico)}</p>
         </article>
         <article>
           <span>Alergias</span>
-          <p>{current.alergias || "Sin registro"}</p>
+          <p>{display(current.alergias)}</p>
         </article>
         <article>
           <span>Tratamiento</span>
-          <p>{current.tratamiento || "Sin registro"}</p>
+          <p>{display(current.tratamiento)}</p>
         </article>
       </div>
     </Card>
