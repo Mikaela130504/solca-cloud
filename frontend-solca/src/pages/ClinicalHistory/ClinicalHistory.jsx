@@ -135,23 +135,32 @@ function buildSurgeries(values) {
   if (!values.cirugias) return "";
   return values.cirugiasLista
     .filter((item) => item.fecha || item.procedimiento)
-    .map((item, index) => `Cirugía ${index + 1}: ${item.fecha || "Sin fecha"} - ${item.procedimiento || "Sin procedimiento"}`)
+    .map((item) => `${item.fecha || "Sin fecha"} - ${item.procedimiento || "Sin procedimiento"}`)
     .join("; ");
 }
 
-function buildObservations(values, patient) {
+function buildStructuredClinicalData(values, patient) {
   const aplicaGineco = ["femenino", "mujer"].some((value) => patient?.sexo?.toLowerCase().includes(value));
-  return [
-    `Antecedentes familiares: ${buildFamilyHistory(values)}.`,
-    `Antecedentes personales: ${["diabetes", "hipertension", "asma", "cirugias", "cancer", "personalesOtros"].filter((key) => values[key]).join(", ") || "Sin antecedentes marcados"}.`,
-    values.cirugias ? buildSurgeries(values) : "",
-    values.personalesOtros ? `Otros personales: ${values.personalesOtrosDetalle}.` : "",
-    aplicaGineco ? `Gineco-obstétricos: Cesáreas ${values.cesareas || 0}; Partos ${values.partos || 0}; Abortos ${values.abortos || 0}; Embarazos ${values.embarazos || 0}; Observaciones: ${values.ginecoObservaciones || "N/A"}.` : "",
-    `Medicamentos actuales: ${values.medicamentosActuales || "N/A"}.`,
-    `Alergias: ${values.tieneAlergias ? values.alergias : "No refiere"}.`,
-    `Examen físico: General: ${values.examenGeneral || "N/A"}; Cabeza/cuello: ${values.cabezaCuello || "N/A"}; Tórax: ${values.torax || "N/A"}; Abdomen: ${values.abdomen || "N/A"}; Extremidades: ${values.extremidades || "N/A"}; Neurológico: ${values.neurologico || "N/A"}.`,
-    values.observaciones ? `Observaciones: ${values.observaciones}` : "",
-  ].filter(Boolean).join("\n");
+  const personales = ["diabetes", "hipertension", "asma", "cirugias", "cancer", "personalesOtros"]
+    .filter((key) => values[key])
+    .map((key) => ({
+      diabetes: "Diabetes",
+      hipertension: "Hipertensión",
+      asma: "Asma",
+      cirugias: "Cirugías",
+      cancer: "Cáncer",
+      personalesOtros: `Otros: ${values.personalesOtrosDetalle || "Sin detalle"}`,
+    }[key]));
+  return {
+    antecedentesFamiliares: buildFamilyHistory(values),
+    antecedentesPersonales: personales.join("; ") || "Sin antecedentes marcados",
+    cirugiasDetalle: values.cirugias ? buildSurgeries(values) : "",
+    ginecoObstetricos: aplicaGineco ? `Cesáreas ${values.cesareas || 0}; Partos ${values.partos || 0}; Abortos ${values.abortos || 0}; Embarazos ${values.embarazos || 0}; Observaciones: ${values.ginecoObservaciones || "N/A"}` : "",
+    medicamentosActuales: values.medicamentosActuales || "N/A",
+    alergiasDetalle: values.tieneAlergias ? values.alergias : "No refiere",
+    examenFisico: `General: ${values.examenGeneral || "N/A"}; Cabeza/cuello: ${values.cabezaCuello || "N/A"}; Tórax: ${values.torax || "N/A"}; Abdomen: ${values.abdomen || "N/A"}; Extremidades: ${values.extremidades || "N/A"}; Neurológico: ${values.neurologico || "N/A"}`,
+    signosVitales: `Peso ${values.peso || "N/A"} kg; Talla ${values.talla || "N/A"} cm; IMC ${values.imc || "N/A"}; Temperatura ${values.temperatura || "N/A"}; PA ${values.presionArterial || "N/A"}; FC ${values.frecuenciaCardiaca || "N/A"}; FR ${values.frecuenciaRespiratoria || "N/A"}; Saturación ${values.saturacion || "N/A"}`,
+  };
 }
 
 export default function ClinicalHistory() {
@@ -296,9 +305,11 @@ export default function ClinicalHistory() {
     if (!form.validate()) return;
     setSaving(true);
     try {
+      const structured = buildStructuredClinicalData(form.values, selectedPatient);
       await createClinicalHistory({
         ...form.values,
-        observaciones: buildObservations(form.values, selectedPatient),
+        ...structured,
+        observaciones: form.values.observaciones,
         tratamiento: form.values.tratamiento,
         diagnosticoPrincipal: `${form.values.cie10} - ${form.values.diagnosticoPrincipal}`,
         diagnosticosSecundarios: form.values.cie10Secundario ? `${form.values.cie10Secundario} - ${form.values.diagnosticoSecundario}` : "",

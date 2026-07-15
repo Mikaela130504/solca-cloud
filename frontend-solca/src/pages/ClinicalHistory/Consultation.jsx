@@ -157,11 +157,13 @@ export default function Consultation() {
     setSaving(true);
     try {
       const diagnosticoTexto = `${form.values.cie10} - ${form.values.diagnostico}`;
+      const signosVitales = `Peso ${form.values.peso || "N/A"} kg; Talla ${form.values.talla || "N/A"} cm; IMC ${form.values.imc || "N/A"}; Temperatura ${form.values.temperatura || "N/A"}; PA ${form.values.presionArterial || "N/A"}; FC ${form.values.frecuenciaCardiaca || "N/A"}; FR ${form.values.frecuenciaRespiratoria || "N/A"}; Saturación ${form.values.saturacion || "N/A"}`;
       const savedConsultation = await createConsultation({
         ...form.values,
         diagnostico: diagnosticoTexto,
         tratamiento: form.values.plan,
-        observaciones: `Medicación: ${form.values.medicacion || "N/A"}\nPróximo control: ${form.values.proximoControl || "N/A"}\nSignos vitales: Peso ${form.values.peso || "N/A"} kg; Talla ${form.values.talla || "N/A"} cm; IMC ${form.values.imc || "N/A"}; Temperatura ${form.values.temperatura || "N/A"}; PA ${form.values.presionArterial || "N/A"}; FC ${form.values.frecuenciaCardiaca || "N/A"}; FR ${form.values.frecuenciaRespiratoria || "N/A"}; Saturación ${form.values.saturacion || "N/A"}.`,
+        observaciones: "",
+        signosVitales,
       });
       const requests = [];
       if (form.values.solicitaLaboratorio) {

@@ -21,8 +21,8 @@ public class ConsultaServiceApplication {
   @Bean CommandLineRunner schema(RegistroRepository repo) { return args -> repo.schema(); }
 }
 
-record RegistroDto(Long id, String idPacienteRegional, String cedula, LocalDate fecha, String sede, String medico, String especialidad, String tipoConsulta, String diagnostico, String tratamiento, String motivo, String evolucion, String resultado, String observaciones) {}
-record RegistroRequest(@NotBlank String cedula, String idPacienteRegional, @NotNull LocalDate fecha, @NotBlank String sede, String medico, String especialidad, String tipoConsulta, String diagnostico, String tratamiento, String motivo, String evolucion, String resultado, String observaciones) {}
+record RegistroDto(Long id, String idPacienteRegional, String cedula, LocalDate fecha, String sede, String medico, String especialidad, String tipoConsulta, String diagnostico, String tratamiento, String motivo, String evolucion, String resultado, String observaciones, String antecedentesFamiliares, String antecedentesPersonales, String cirugias, String ginecoObstetricos, String medicamentosActuales, String alergias, String examenFisico, String signosVitales, String medicacion, String proximoControl) {}
+record RegistroRequest(@NotBlank String cedula, String idPacienteRegional, @NotNull LocalDate fecha, @NotBlank String sede, String medico, String especialidad, String tipoConsulta, String diagnostico, String tratamiento, String motivo, String evolucion, String resultado, String observaciones, String antecedentesFamiliares, String antecedentesPersonales, String cirugias, String ginecoObstetricos, String medicamentosActuales, String alergias, String examenFisico, String signosVitales, String medicacion, String proximoControl) {}
 
 @RestController
 @RequestMapping("/consultas")
@@ -56,11 +56,25 @@ class RegistroRepository {
   JdbcTemplate jdbc() { return jdbc; }
   void schema() {
     jdbc.execute("CREATE TABLE IF NOT EXISTS consultas (id INTEGER PRIMARY KEY AUTOINCREMENT, id_paciente_regional TEXT, cedula TEXT NOT NULL, fecha TEXT NOT NULL, sede TEXT NOT NULL, medico TEXT, especialidad TEXT, tipo_consulta TEXT, diagnostico TEXT, tratamiento TEXT, motivo TEXT, evolucion TEXT, resultado TEXT, observaciones TEXT)");
+    agregarColumna("consultas", "antecedentes_familiares", "TEXT");
+    agregarColumna("consultas", "antecedentes_personales", "TEXT");
+    agregarColumna("consultas", "cirugias", "TEXT");
+    agregarColumna("consultas", "gineco_obstetricos", "TEXT");
+    agregarColumna("consultas", "medicamentos_actuales", "TEXT");
+    agregarColumna("consultas", "alergias", "TEXT");
+    agregarColumna("consultas", "examen_fisico", "TEXT");
+    agregarColumna("consultas", "signos_vitales", "TEXT");
+    agregarColumna("consultas", "medicacion", "TEXT");
+    agregarColumna("consultas", "proximo_control", "TEXT");
     jdbc.update("UPDATE consultas SET sede='SOLCA Quito' WHERE sede IS NULL OR TRIM(sede) = '' OR sede NOT IN ('SOLCA Cuenca','SOLCA Quito','SOLCA Manabí')");
     migrarRegistros("consultas");
+    migrarObservacionesEstructuradas();
     jdbc.execute("CREATE INDEX IF NOT EXISTS idx_consultas_paciente ON consultas(id_paciente_regional)");
     jdbc.execute("CREATE INDEX IF NOT EXISTS idx_consultas_cedula ON consultas(cedula)");
     Auditoria.crearTabla(jdbc);
+  }
+  void agregarColumna(String tabla, String columna, String definicion) {
+    try { jdbc.execute("ALTER TABLE " + tabla + " ADD COLUMN " + columna + " " + definicion); } catch (Exception ignored) {}
   }
   void migrarRegistros(String destino) {
     Integer existe = jdbc.queryForObject("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='registros'", Integer.class);
@@ -69,12 +83,12 @@ class RegistroRepository {
     }
   }
   RegistroDto crear(RegistroRequest r) {
-    jdbc.update("INSERT INTO consultas(id_paciente_regional,cedula,fecha,sede,medico,especialidad,tipo_consulta,diagnostico,tratamiento,motivo,evolucion,resultado,observaciones) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)", normalizarPaciente(r),r.cedula(),r.fecha().toString(),r.sede(),r.medico(),r.especialidad(),r.tipoConsulta(),r.diagnostico(),r.tratamiento(),r.motivo(),r.evolucion(),r.resultado(),r.observaciones());
+    jdbc.update("INSERT INTO consultas(id_paciente_regional,cedula,fecha,sede,medico,especialidad,tipo_consulta,diagnostico,tratamiento,motivo,evolucion,resultado,observaciones,antecedentes_familiares,antecedentes_personales,cirugias,gineco_obstetricos,medicamentos_actuales,alergias,examen_fisico,signos_vitales,medicacion,proximo_control) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", normalizarPaciente(r),r.cedula(),r.fecha().toString(),r.sede(),r.medico(),r.especialidad(),r.tipoConsulta(),r.diagnostico(),r.tratamiento(),r.motivo(),r.evolucion(),r.resultado(),r.observaciones(),r.antecedentesFamiliares(),r.antecedentesPersonales(),r.cirugias(),r.ginecoObstetricos(),r.medicamentosActuales(),r.alergias(),r.examenFisico(),r.signosVitales(),r.medicacion(),r.proximoControl());
     Long id = jdbc.queryForObject("SELECT last_insert_rowid()", Long.class);
     return obtener(id).orElseThrow();
   }
   RegistroDto editar(Long id, RegistroRequest r) {
-    int rows = jdbc.update("UPDATE consultas SET id_paciente_regional=?,cedula=?,fecha=?,sede=?,medico=?,especialidad=?,tipo_consulta=?,diagnostico=?,tratamiento=?,motivo=?,evolucion=?,resultado=?,observaciones=? WHERE id=?", normalizarPaciente(r),r.cedula(),r.fecha().toString(),r.sede(),r.medico(),r.especialidad(),r.tipoConsulta(),r.diagnostico(),r.tratamiento(),r.motivo(),r.evolucion(),r.resultado(),r.observaciones(),id);
+    int rows = jdbc.update("UPDATE consultas SET id_paciente_regional=?,cedula=?,fecha=?,sede=?,medico=?,especialidad=?,tipo_consulta=?,diagnostico=?,tratamiento=?,motivo=?,evolucion=?,resultado=?,observaciones=?,antecedentes_familiares=?,antecedentes_personales=?,cirugias=?,gineco_obstetricos=?,medicamentos_actuales=?,alergias=?,examen_fisico=?,signos_vitales=?,medicacion=?,proximo_control=? WHERE id=?", normalizarPaciente(r),r.cedula(),r.fecha().toString(),r.sede(),r.medico(),r.especialidad(),r.tipoConsulta(),r.diagnostico(),r.tratamiento(),r.motivo(),r.evolucion(),r.resultado(),r.observaciones(),r.antecedentesFamiliares(),r.antecedentesPersonales(),r.cirugias(),r.ginecoObstetricos(),r.medicamentosActuales(),r.alergias(),r.examenFisico(),r.signosVitales(),r.medicacion(),r.proximoControl(),id);
     if (rows == 0) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Registro no encontrado.");
     return obtener(id).orElseThrow();
   }
@@ -83,7 +97,77 @@ class RegistroRepository {
   List<RegistroDto> porPaciente(String id) { return jdbc.query("SELECT * FROM consultas WHERE id_paciente_regional=? OR cedula=? ORDER BY fecha DESC, id DESC", this::map, id, id); }
   Optional<RegistroDto> obtener(Long id) { return jdbc.query("SELECT * FROM consultas WHERE id=?", this::map, id).stream().findFirst(); }
   String normalizarPaciente(RegistroRequest r) { return r.idPacienteRegional() == null || r.idPacienteRegional().isBlank() ? r.cedula() : r.idPacienteRegional(); }
-  RegistroDto map(java.sql.ResultSet rs, int row) throws java.sql.SQLException { return new RegistroDto(rs.getLong("id"),rs.getString("id_paciente_regional"),rs.getString("cedula"),LocalDate.parse(rs.getString("fecha")),rs.getString("sede"),rs.getString("medico"),rs.getString("especialidad"),rs.getString("tipo_consulta"),rs.getString("diagnostico"),rs.getString("tratamiento"),rs.getString("motivo"),rs.getString("evolucion"),rs.getString("resultado"),rs.getString("observaciones")); }
+  RegistroDto map(java.sql.ResultSet rs, int row) throws java.sql.SQLException { return new RegistroDto(rs.getLong("id"),rs.getString("id_paciente_regional"),rs.getString("cedula"),LocalDate.parse(rs.getString("fecha")),rs.getString("sede"),rs.getString("medico"),rs.getString("especialidad"),rs.getString("tipo_consulta"),rs.getString("diagnostico"),rs.getString("tratamiento"),rs.getString("motivo"),rs.getString("evolucion"),rs.getString("resultado"),rs.getString("observaciones"),rs.getString("antecedentes_familiares"),rs.getString("antecedentes_personales"),rs.getString("cirugias"),rs.getString("gineco_obstetricos"),rs.getString("medicamentos_actuales"),rs.getString("alergias"),rs.getString("examen_fisico"),rs.getString("signos_vitales"),rs.getString("medicacion"),rs.getString("proximo_control")); }
+
+  void migrarObservacionesEstructuradas() {
+    for (Map<String,Object> row : jdbc.queryForList("SELECT id, observaciones FROM consultas WHERE observaciones IS NOT NULL AND TRIM(observaciones) <> ''")) {
+      Long id = ((Number) row.get("id")).longValue();
+      String texto = String.valueOf(row.get("observaciones"));
+      Map<String,String> datos = extraerDatos(texto);
+      if (datos.isEmpty()) continue;
+      jdbc.update("""
+        UPDATE consultas SET
+          antecedentes_familiares=COALESCE(NULLIF(antecedentes_familiares,''), ?),
+          antecedentes_personales=COALESCE(NULLIF(antecedentes_personales,''), ?),
+          cirugias=COALESCE(NULLIF(cirugias,''), ?),
+          gineco_obstetricos=COALESCE(NULLIF(gineco_obstetricos,''), ?),
+          medicamentos_actuales=COALESCE(NULLIF(medicamentos_actuales,''), ?),
+          alergias=COALESCE(NULLIF(alergias,''), ?),
+          examen_fisico=COALESCE(NULLIF(examen_fisico,''), ?),
+          signos_vitales=COALESCE(NULLIF(signos_vitales,''), ?),
+          medicacion=COALESCE(NULLIF(medicacion,''), ?),
+          proximo_control=COALESCE(NULLIF(proximo_control,''), ?),
+          observaciones=?
+        WHERE id=?
+        """,
+        datos.getOrDefault("antecedentesFamiliares", ""),
+        datos.getOrDefault("antecedentesPersonales", ""),
+        datos.getOrDefault("cirugias", ""),
+        datos.getOrDefault("ginecoObstetricos", ""),
+        datos.getOrDefault("medicamentosActuales", ""),
+        datos.getOrDefault("alergias", ""),
+        datos.getOrDefault("examenFisico", ""),
+        datos.getOrDefault("signosVitales", ""),
+        datos.getOrDefault("medicacion", ""),
+        datos.getOrDefault("proximoControl", ""),
+        datos.getOrDefault("observaciones", texto),
+        id);
+    }
+  }
+
+  Map<String,String> extraerDatos(String texto) {
+    Map<String,String> datos = new LinkedHashMap<>();
+    datos.put("antecedentesFamiliares", extraerLinea(texto, "Antecedentes familiares:"));
+    datos.put("antecedentesPersonales", extraerLinea(texto, "Antecedentes personales:"));
+    datos.put("cirugias", extraerLineas(texto, "Cirugía "));
+    datos.put("ginecoObstetricos", extraerLinea(texto, "Gineco-obstétricos:"));
+    datos.put("medicamentosActuales", extraerLinea(texto, "Medicamentos actuales:"));
+    datos.put("alergias", extraerLinea(texto, "Alergias:"));
+    datos.put("examenFisico", extraerLinea(texto, "Examen físico:"));
+    datos.put("signosVitales", extraerLinea(texto, "Signos vitales:"));
+    datos.put("medicacion", extraerLinea(texto, "Medicación:"));
+    datos.put("proximoControl", extraerLinea(texto, "Próximo control:"));
+    datos.put("observaciones", extraerLinea(texto, "Observaciones:"));
+    datos.entrySet().removeIf(entry -> entry.getValue() == null || entry.getValue().isBlank());
+    return datos;
+  }
+
+  String extraerLinea(String texto, String prefijo) {
+    for (String linea : texto.split("\\R")) {
+      String limpia = linea.trim();
+      if (limpia.startsWith(prefijo)) return limpia.substring(prefijo.length()).trim();
+    }
+    return "";
+  }
+
+  String extraerLineas(String texto, String prefijo) {
+    List<String> lineas = new ArrayList<>();
+    for (String linea : texto.split("\\R")) {
+      String limpia = linea.trim();
+      if (limpia.startsWith(prefijo)) lineas.add(limpia);
+    }
+    return String.join("; ", lineas);
+  }
 }
 
 class Sedes {

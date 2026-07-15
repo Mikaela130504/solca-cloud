@@ -75,6 +75,42 @@ function RecordDetail({ record }) {
           <dd>{record.tratamiento || "Sin registro"}</dd>
         </div>
         <div>
+          <dt>Antecedentes familiares</dt>
+          <dd>{record.antecedentesFamiliares || "Sin registro"}</dd>
+        </div>
+        <div>
+          <dt>Antecedentes personales</dt>
+          <dd>{record.antecedentesPersonales || "Sin registro"}</dd>
+        </div>
+        <div>
+          <dt>Cirugías</dt>
+          <dd>{record.cirugias || "Sin registro"}</dd>
+        </div>
+        <div>
+          <dt>Gineco-obstétricos</dt>
+          <dd>{record.ginecoObstetricos || "Sin registro"}</dd>
+        </div>
+        <div>
+          <dt>Medicamentos actuales</dt>
+          <dd>{record.medicamentosActuales || record.medicacion || "Sin registro"}</dd>
+        </div>
+        <div>
+          <dt>Alergias</dt>
+          <dd>{record.alergias || "Sin registro"}</dd>
+        </div>
+        <div>
+          <dt>Signos vitales</dt>
+          <dd>{record.signosVitales || "Sin registro"}</dd>
+        </div>
+        <div>
+          <dt>Examen físico</dt>
+          <dd>{record.examenFisico || "Sin registro"}</dd>
+        </div>
+        <div>
+          <dt>Próximo control</dt>
+          <dd>{record.proximoControl || "Sin registro"}</dd>
+        </div>
+        <div>
           <dt>Observaciones</dt>
           <dd>{record.observaciones || "Sin registro"}</dd>
         </div>

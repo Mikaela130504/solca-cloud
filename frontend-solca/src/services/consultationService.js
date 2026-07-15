@@ -16,6 +16,14 @@ export async function createClinicalHistory(history) {
     motivo: history.motivoConsulta,
     evolucion: history.evolucion || history.enfermedadActual,
     observaciones: history.observaciones,
+    antecedentesFamiliares: history.antecedentesFamiliares,
+    antecedentesPersonales: history.antecedentesPersonales,
+    cirugias: history.cirugiasDetalle,
+    ginecoObstetricos: history.ginecoObstetricos,
+    medicamentosActuales: history.medicamentosActuales,
+    alergias: history.alergiasDetalle,
+    examenFisico: history.examenFisico,
+    signosVitales: history.signosVitales,
   };
   const { data } = await api.post("/consultas", payload);
   return data;
@@ -35,6 +43,9 @@ export async function createConsultation(consultation) {
     motivo: consultation.motivo,
     evolucion: consultation.evolucion,
     observaciones: consultation.observaciones,
+    signosVitales: consultation.signosVitales,
+    medicacion: consultation.medicacion,
+    proximoControl: consultation.proximoControl,
   };
   const { data } = await api.post("/consultas", payload);
   return data;
