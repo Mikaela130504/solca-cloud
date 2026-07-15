@@ -130,7 +130,7 @@ class RegistroRepository {
         datos.getOrDefault("signosVitales", ""),
         datos.getOrDefault("medicacion", ""),
         datos.getOrDefault("proximoControl", ""),
-        datos.getOrDefault("observaciones", texto),
+        datos.getOrDefault("observaciones", ""),
         id);
     }
   }
