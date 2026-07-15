@@ -78,13 +78,14 @@ class RepositorioService {
   Map<String,Object> consultar(String paciente, String authorization, HttpServletRequest http) {
     Map<String,Object> respuesta = new LinkedHashMap<>();
     List<String> noDisponibles = new ArrayList<>();
-    Object pacienteDto = llamar(pacientes + (paciente.matches("\\d{10}") ? "/pacientes/cedula/" : "/pacientes/") + paciente, authorization, noDisponibles, "Paciente Maestro Regional", new LinkedHashMap<>());
+    Object pacienteDto = buscarPaciente(paciente, authorization, noDisponibles);
     String idRegional = paciente;
     if (pacienteDto instanceof Map<?,?> map && map.get("idPacienteRegional") != null) idRegional = String.valueOf(map.get("idPacienteRegional"));
     respuesta.put("paciente", pacienteDto);
-    Object consultasPaciente = llamar(consultas + "/consultas/paciente/" + idRegional, authorization, noDisponibles, "Consulta Clínica", List.of());
-    Object laboratoriosPaciente = llamar(laboratorios + "/laboratorios/paciente/" + idRegional, authorization, noDisponibles, "Laboratorio Clínico", List.of());
-    Object imagenologiaPaciente = llamar(imagenologia + "/imagenologia/paciente/" + idRegional, authorization, noDisponibles, "Imagenología", List.of());
+    List<String> identificadores = identificadoresPaciente(idRegional);
+    Object consultasPaciente = buscarRegistros(consultas + "/consultas/paciente/", identificadores, authorization, noDisponibles, "Consulta Clínica");
+    Object laboratoriosPaciente = buscarRegistros(laboratorios + "/laboratorios/paciente/", identificadores, authorization, noDisponibles, "Laboratorio Clínico");
+    Object imagenologiaPaciente = buscarRegistros(imagenologia + "/imagenologia/paciente/", identificadores, authorization, noDisponibles, "Imagenología");
     respuesta.put("consultas", consultasPaciente);
     respuesta.put("laboratorios", consolidarConConsulta(laboratoriosPaciente, consultasPaciente));
     respuesta.put("imagenologia", consolidarConConsulta(imagenologiaPaciente, consultasPaciente));
@@ -124,6 +125,44 @@ class RepositorioService {
       registrarServicio(nombre, "NO_DISPONIBLE", url, "ERROR", System.currentTimeMillis() - inicio, ex.getMessage());
       return fallback;
     }
+  }
+
+  Object buscarPaciente(String paciente, String authorization, List<String> noDisponibles) {
+    if (paciente.matches("\\d{10}")) {
+      return llamar(pacientes + "/pacientes/cedula/" + paciente, authorization, noDisponibles, "Paciente Maestro Regional", new LinkedHashMap<>());
+    }
+    for (String id : identificadoresPaciente(paciente)) {
+      Object respuesta = llamar(pacientes + "/pacientes/" + id, authorization, noDisponibles, "Paciente Maestro Regional", new LinkedHashMap<>());
+      if (respuesta instanceof Map<?,?> map && !map.isEmpty()) return respuesta;
+    }
+    return new LinkedHashMap<>();
+  }
+
+  Object buscarRegistros(String endpoint, List<String> identificadores, String authorization, List<String> noDisponibles, String nombre) {
+    for (String id : identificadores) {
+      Object respuesta = llamar(endpoint + id, authorization, noDisponibles, nombre, List.of());
+      if (respuesta instanceof List<?> list && !list.isEmpty()) return respuesta;
+    }
+    return List.of();
+  }
+
+  List<String> identificadoresPaciente(String id) {
+    LinkedHashSet<String> ids = new LinkedHashSet<>();
+    if (id == null || id.isBlank()) return List.of();
+    String limpio = id.trim();
+    ids.add(limpio);
+    if (limpio.toUpperCase(Locale.ROOT).startsWith("PAC")) {
+      String digitos = limpio.replaceAll("\\D", "");
+      if (!digitos.isBlank()) {
+        try {
+          int numero = Integer.parseInt(digitos);
+          ids.add("PAC" + String.format("%09d", numero));
+          ids.add("PAC-" + String.format("%07d", numero));
+          ids.add("PAC" + String.format("%07d", numero));
+        } catch (NumberFormatException ignored) {}
+      }
+    }
+    return new ArrayList<>(ids);
   }
 
   Object consolidarConConsulta(Object registros, Object consultasPaciente) {
