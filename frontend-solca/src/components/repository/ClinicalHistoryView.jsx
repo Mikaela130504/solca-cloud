@@ -3,6 +3,22 @@ import Card from "../common/Card.jsx";
 export default function ClinicalHistoryView({ history, historiasLocales = [] }) {
   const current = history || {};
   const display = (value) => (value === null || value === undefined || value === "" ? "No disponible" : value);
+  const fields = [
+    ["Diagnóstico principal", current.diagnosticoPrincipal || current.diagnostico],
+    ["Motivo de consulta", current.motivo],
+    ["Enfermedad actual / evolución", current.evolucion],
+    ["Antecedentes familiares", current.antecedentesFamiliares],
+    ["Antecedentes personales", current.antecedentesPersonales],
+    ["Cirugías", current.cirugias],
+    ["Gineco-obstétricos", current.ginecoObstetricos],
+    ["Medicamentos actuales", current.medicamentosActuales || current.medicacion],
+    ["Alergias", current.alergias],
+    ["Signos vitales", current.signosVitales],
+    ["Examen físico", current.examenFisico],
+    ["Tratamiento", current.tratamiento],
+    ["Observaciones", current.observaciones],
+  ];
+
   return (
     <Card title="Historia clínica" subtitle="Resumen longitudinal no editable">
       <div className="history-readonly">
@@ -26,18 +42,12 @@ export default function ClinicalHistoryView({ history, historiasLocales = [] }) 
             </ul>
           </article>
         )}
-        <article>
-          <span>Diagnóstico principal</span>
-          <p>{display(current.diagnosticoPrincipal || current.diagnostico)}</p>
-        </article>
-        <article>
-          <span>Alergias</span>
-          <p>{display(current.alergias)}</p>
-        </article>
-        <article>
-          <span>Tratamiento</span>
-          <p>{display(current.tratamiento)}</p>
-        </article>
+        {fields.map(([label, value]) => (
+          <article key={label}>
+            <span>{label}</span>
+            <p>{display(value)}</p>
+          </article>
+        ))}
       </div>
     </Card>
   );
