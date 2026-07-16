@@ -56,26 +56,32 @@ class RepositorioService {
 
   void schema() {
     Auditoria.crearTabla(jdbc);
-    jdbc.execute("CREATE TABLE IF NOT EXISTS historial_consultas_repositorio (id INTEGER PRIMARY KEY AUTOINCREMENT, paciente TEXT NOT NULL, id_paciente_regional TEXT, usuario TEXT, fecha_hora TEXT NOT NULL, resultado TEXT NOT NULL, servicios_no_disponibles TEXT)");
-    jdbc.execute("CREATE TABLE IF NOT EXISTS estado_servicios (id INTEGER PRIMARY KEY AUTOINCREMENT, servicio TEXT NOT NULL UNIQUE, estado TEXT NOT NULL, ultima_revision TEXT NOT NULL, mensaje TEXT)");
-    jdbc.execute("CREATE TABLE IF NOT EXISTS logs_integracion (id INTEGER PRIMARY KEY AUTOINCREMENT, servicio TEXT NOT NULL, endpoint TEXT NOT NULL, fecha_hora TEXT NOT NULL, resultado TEXT NOT NULL, tiempo_respuesta_ms INTEGER, mensaje TEXT)");
-    jdbc.execute("CREATE TABLE IF NOT EXISTS cache_clinica (id INTEGER PRIMARY KEY AUTOINCREMENT, id_paciente_regional TEXT NOT NULL UNIQUE, fecha_hora TEXT NOT NULL, paciente TEXT, cedula TEXT, sede TEXT, diagnostico_principal TEXT, total_consultas INTEGER DEFAULT 0, total_laboratorios INTEGER DEFAULT 0, total_imagenologia INTEGER DEFAULT 0, servicios_no_disponibles TEXT, resumen TEXT NOT NULL)");
-    agregarColumna("cache_clinica", "paciente", "TEXT");
-    agregarColumna("cache_clinica", "cedula", "TEXT");
-    agregarColumna("cache_clinica", "sede", "TEXT");
-    agregarColumna("cache_clinica", "diagnostico_principal", "TEXT");
-    agregarColumna("cache_clinica", "total_consultas", "INTEGER DEFAULT 0");
-    agregarColumna("cache_clinica", "total_laboratorios", "INTEGER DEFAULT 0");
-    agregarColumna("cache_clinica", "total_imagenologia", "INTEGER DEFAULT 0");
-    agregarColumna("cache_clinica", "servicios_no_disponibles", "TEXT");
     jdbc.execute("CREATE TABLE IF NOT EXISTS repositorio_clinico (id INTEGER PRIMARY KEY AUTOINCREMENT, tipo_registro TEXT NOT NULL, id_paciente_regional TEXT, registro_origen_id TEXT, consulta_id TEXT, cedula TEXT, nombres TEXT, apellidos TEXT, fecha_nacimiento TEXT, edad TEXT, sexo TEXT, estado_civil TEXT, direccion TEXT, provincia TEXT, ciudad TEXT, telefono TEXT, correo TEXT, contacto_emergencia TEXT, seguro TEXT, tipo_sangre TEXT, nacionalidad TEXT, fecha TEXT, sede TEXT, medico TEXT, especialidad TEXT, tipo_consulta TEXT, diagnostico TEXT, tratamiento TEXT, motivo TEXT, evolucion TEXT, resultado TEXT, observaciones TEXT, antecedentes_familiares TEXT, antecedentes_personales TEXT, cirugias TEXT, gineco_embarazos TEXT, gineco_partos TEXT, gineco_cesareas TEXT, gineco_abortos TEXT, gineco_observaciones TEXT, medicamentos_actuales TEXT, alergias TEXT, examen_general TEXT, examen_cabeza_cuello TEXT, examen_torax TEXT, examen_abdomen TEXT, examen_extremidades TEXT, examen_neurologico TEXT, peso TEXT, talla TEXT, imc TEXT, temperatura TEXT, presion_arterial TEXT, frecuencia_cardiaca TEXT, frecuencia_respiratoria TEXT, saturacion_oxigeno TEXT, medicacion TEXT, proximo_control TEXT, tipo_examen TEXT, estado TEXT, prioridad TEXT, tecnologo_responsable TEXT, fecha_solicitud TEXT, fecha_resultado TEXT, valores TEXT, unidad TEXT, valor_referencia TEXT, interpretacion TEXT, codigo_muestra TEXT, resultado_critico TEXT, hora_resultado TEXT, fecha_validacion TEXT, usuario_valido TEXT, observaciones_laboratorio TEXT, tipo_estudio TEXT, formato TEXT, url TEXT, region_anatomica TEXT, tecnico_responsable TEXT, hora TEXT, fecha_realizacion TEXT, observaciones_imagenologo TEXT, hallazgos TEXT, recomendaciones TEXT, fecha_sincronizacion TEXT)");
+    agregarColumna("repositorio_clinico", "paciente", "TEXT");
+    agregarColumna("repositorio_clinico", "usuario", "TEXT");
+    agregarColumna("repositorio_clinico", "servicio", "TEXT");
+    agregarColumna("repositorio_clinico", "endpoint", "TEXT");
+    agregarColumna("repositorio_clinico", "fecha_hora", "TEXT");
+    agregarColumna("repositorio_clinico", "ultima_revision", "TEXT");
+    agregarColumna("repositorio_clinico", "mensaje", "TEXT");
+    agregarColumna("repositorio_clinico", "tiempo_respuesta_ms", "INTEGER");
+    agregarColumna("repositorio_clinico", "servicios_no_disponibles", "TEXT");
+    agregarColumna("repositorio_clinico", "diagnostico_principal", "TEXT");
+    agregarColumna("repositorio_clinico", "total_consultas", "INTEGER DEFAULT 0");
+    agregarColumna("repositorio_clinico", "total_laboratorios", "INTEGER DEFAULT 0");
+    agregarColumna("repositorio_clinico", "total_imagenologia", "INTEGER DEFAULT 0");
+    agregarColumna("repositorio_clinico", "resumen", "TEXT");
     jdbc.execute("CREATE INDEX IF NOT EXISTS idx_repositorio_clinico_regional ON repositorio_clinico(id_paciente_regional)");
     jdbc.execute("CREATE INDEX IF NOT EXISTS idx_repositorio_clinico_tipo ON repositorio_clinico(tipo_registro)");
     jdbc.execute("DROP TABLE IF EXISTS repositorio_pacientes");
     jdbc.execute("DROP TABLE IF EXISTS repositorio_consultas");
     jdbc.execute("DROP TABLE IF EXISTS repositorio_laboratorios");
     jdbc.execute("DROP TABLE IF EXISTS repositorio_imagenologia");
-    jdbc.execute("CREATE TABLE IF NOT EXISTS configuracion_repositorio (clave TEXT PRIMARY KEY, valor TEXT NOT NULL)");
+    jdbc.execute("DROP TABLE IF EXISTS historial_consultas_repositorio");
+    jdbc.execute("DROP TABLE IF EXISTS estado_servicios");
+    jdbc.execute("DROP TABLE IF EXISTS logs_integracion");
+    jdbc.execute("DROP TABLE IF EXISTS cache_clinica");
+    jdbc.execute("DROP TABLE IF EXISTS configuracion_repositorio");
   }
 
   void agregarColumna(String tabla, String columna, String definicion) {
@@ -236,30 +242,50 @@ class RepositorioService {
   }
 
   List<Map<String,Object>> estadoServicios() {
-    return jdbc.queryForList("SELECT servicio, estado, ultima_revision, mensaje FROM estado_servicios ORDER BY servicio");
+    return jdbc.queryForList("SELECT servicio, estado, ultima_revision, mensaje FROM repositorio_clinico WHERE tipo_registro='ESTADO_SERVICIO' ORDER BY servicio");
   }
 
   List<Map<String,Object>> logsIntegracion() {
-    return jdbc.queryForList("SELECT servicio, endpoint, fecha_hora, resultado, tiempo_respuesta_ms, mensaje FROM logs_integracion ORDER BY id DESC LIMIT 100");
+    return jdbc.queryForList("SELECT servicio, endpoint, fecha_hora, resultado, tiempo_respuesta_ms, mensaje FROM repositorio_clinico WHERE tipo_registro='LOG_INTEGRACION' ORDER BY id DESC LIMIT 100");
   }
 
   List<Map<String,Object>> historialConsultas(String idRegional) {
-    return jdbc.queryForList("SELECT paciente, id_paciente_regional, usuario, fecha_hora, resultado, servicios_no_disponibles FROM historial_consultas_repositorio WHERE id_paciente_regional=? OR paciente=? ORDER BY id DESC LIMIT 50", idRegional, idRegional);
+    return jdbc.queryForList("SELECT paciente, id_paciente_regional, usuario, fecha_hora, resultado, servicios_no_disponibles FROM repositorio_clinico WHERE tipo_registro='HISTORIAL_REPOSITORIO' AND (id_paciente_regional=? OR paciente=?) ORDER BY id DESC LIMIT 50", idRegional, idRegional);
   }
 
   List<Map<String,Object>> cacheClinica(String idRegional) {
-    return jdbc.queryForList("SELECT id_paciente_regional, fecha_hora, paciente, cedula, sede, diagnostico_principal, total_consultas, total_laboratorios, total_imagenologia, servicios_no_disponibles, resumen FROM cache_clinica WHERE id_paciente_regional=? ORDER BY id DESC LIMIT 10", idRegional);
+    return jdbc.queryForList("SELECT id_paciente_regional, fecha_hora, paciente, cedula, sede, diagnostico_principal, total_consultas, total_laboratorios, total_imagenologia, servicios_no_disponibles, resumen FROM repositorio_clinico WHERE tipo_registro='CACHE_CLINICA' AND id_paciente_regional=? ORDER BY id DESC LIMIT 10", idRegional);
   }
 
   void registrarServicio(String servicio, String estado, String endpoint, String resultado, long tiempoMs, String mensaje) {
     String ahora = LocalDateTime.now().toString();
-    jdbc.update("INSERT INTO logs_integracion(servicio, endpoint, fecha_hora, resultado, tiempo_respuesta_ms, mensaje) VALUES (?,?,?,?,?,?)", servicio, endpoint, ahora, resultado, tiempoMs, mensaje);
-    jdbc.update("INSERT INTO estado_servicios(servicio, estado, ultima_revision, mensaje) VALUES (?,?,?,?) ON CONFLICT(servicio) DO UPDATE SET estado=excluded.estado, ultima_revision=excluded.ultima_revision, mensaje=excluded.mensaje", servicio, estado, ahora, mensaje);
+    Map<String,Object> log = baseRepositorio("LOG_INTEGRACION", "", ahora);
+    log.put("servicio", servicio);
+    log.put("endpoint", endpoint);
+    log.put("fecha_hora", ahora);
+    log.put("resultado", resultado);
+    log.put("tiempo_respuesta_ms", tiempoMs);
+    log.put("mensaje", mensaje);
+    insertarRepositorio(log);
+    jdbc.update("DELETE FROM repositorio_clinico WHERE tipo_registro='ESTADO_SERVICIO' AND servicio=?", servicio);
+    Map<String,Object> estadoRow = baseRepositorio("ESTADO_SERVICIO", "", ahora);
+    estadoRow.put("servicio", servicio);
+    estadoRow.put("estado", estado);
+    estadoRow.put("ultima_revision", ahora);
+    estadoRow.put("mensaje", mensaje);
+    insertarRepositorio(estadoRow);
   }
 
   void guardarHistorial(String paciente, String idRegional, List<String> noDisponibles, HttpServletRequest http) {
     String usuario = http.getUserPrincipal() == null ? "sistema" : http.getUserPrincipal().getName();
-    jdbc.update("INSERT INTO historial_consultas_repositorio(paciente, id_paciente_regional, usuario, fecha_hora, resultado, servicios_no_disponibles) VALUES (?,?,?,?,?,?)", paciente, idRegional, usuario, LocalDateTime.now().toString(), noDisponibles.isEmpty() ? "COMPLETO" : "PARCIAL", String.join(", ", noDisponibles));
+    String ahora = LocalDateTime.now().toString();
+    Map<String,Object> row = baseRepositorio("HISTORIAL_REPOSITORIO", idRegional, ahora);
+    row.put("paciente", paciente);
+    row.put("usuario", usuario);
+    row.put("fecha_hora", ahora);
+    row.put("resultado", noDisponibles.isEmpty() ? "COMPLETO" : "PARCIAL");
+    row.put("servicios_no_disponibles", String.join(", ", noDisponibles));
+    insertarRepositorio(row);
   }
 
   void guardarCache(String idRegional, Map<String,Object> respuesta) {
@@ -274,26 +300,25 @@ class RepositorioService {
     String diagnostico = primerValorNoVacio(primerCampo(consultas, "diagnostico"), primerCampo(laboratorios, "diagnostico"), primerCampo(imagenologia, "diagnostico"));
     String servicios = String.join(", ", noDisponibles.stream().map(String::valueOf).filter(v -> !v.isBlank()).toList());
     String resumen = "Paciente " + nombrePaciente + " con " + consultas.size() + " consultas, " + laboratorios.size() + " laboratorios y " + imagenologia.size() + " estudios de imagen.";
-    jdbc.update("""
-      INSERT INTO cache_clinica(id_paciente_regional, fecha_hora, paciente, cedula, sede, diagnostico_principal, total_consultas, total_laboratorios, total_imagenologia, servicios_no_disponibles, resumen)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?)
-      ON CONFLICT(id_paciente_regional) DO UPDATE SET
-        fecha_hora=excluded.fecha_hora,
-        paciente=excluded.paciente,
-        cedula=excluded.cedula,
-        sede=excluded.sede,
-        diagnostico_principal=excluded.diagnostico_principal,
-        total_consultas=excluded.total_consultas,
-        total_laboratorios=excluded.total_laboratorios,
-        total_imagenologia=excluded.total_imagenologia,
-        servicios_no_disponibles=excluded.servicios_no_disponibles,
-        resumen=excluded.resumen
-      """, idRegional, LocalDateTime.now().toString(), nombrePaciente, cedula, sede, diagnostico, consultas.size(), laboratorios.size(), imagenologia.size(), servicios, resumen);
+    String ahora = LocalDateTime.now().toString();
+    jdbc.update("DELETE FROM repositorio_clinico WHERE tipo_registro='CACHE_CLINICA' AND id_paciente_regional=?", idRegional);
+    Map<String,Object> cache = baseRepositorio("CACHE_CLINICA", idRegional, ahora);
+    cache.put("fecha_hora", ahora);
+    cache.put("paciente", nombrePaciente);
+    cache.put("cedula", cedula);
+    cache.put("sede", sede);
+    cache.put("diagnostico_principal", diagnostico);
+    cache.put("total_consultas", consultas.size());
+    cache.put("total_laboratorios", laboratorios.size());
+    cache.put("total_imagenologia", imagenologia.size());
+    cache.put("servicios_no_disponibles", servicios);
+    cache.put("resumen", resumen);
+    insertarRepositorio(cache);
     guardarRepositorioCentral(idRegional, paciente, consultas, laboratorios, imagenologia);
   }
 
   void guardarRepositorioCentral(String idRegional, Map<String,Object> paciente, List<?> consultas, List<?> laboratorios, List<?> imagenologia) {
-    jdbc.update("DELETE FROM repositorio_clinico WHERE id_paciente_regional=?", idRegional);
+    jdbc.update("DELETE FROM repositorio_clinico WHERE id_paciente_regional=? AND tipo_registro IN ('PACIENTE','CONSULTA','LABORATORIO','IMAGENOLOGIA')", idRegional);
     String ahora = LocalDateTime.now().toString();
     if (!paciente.isEmpty()) {
       Map<String,Object> row = baseRepositorio("PACIENTE", idRegional, ahora);
