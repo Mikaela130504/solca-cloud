@@ -68,14 +68,13 @@ class RepositorioService {
     agregarColumna("cache_clinica", "total_laboratorios", "INTEGER DEFAULT 0");
     agregarColumna("cache_clinica", "total_imagenologia", "INTEGER DEFAULT 0");
     agregarColumna("cache_clinica", "servicios_no_disponibles", "TEXT");
-    jdbc.execute("CREATE TABLE IF NOT EXISTS repositorio_pacientes (id INTEGER PRIMARY KEY AUTOINCREMENT, id_paciente_regional TEXT, cedula TEXT, nombres TEXT, apellidos TEXT, fecha_nacimiento TEXT, edad TEXT, sexo TEXT, estado_civil TEXT, direccion TEXT, provincia TEXT, ciudad TEXT, telefono TEXT, correo TEXT, contacto_emergencia TEXT, seguro TEXT, tipo_sangre TEXT, nacionalidad TEXT, observaciones TEXT, sede TEXT, fecha_sincronizacion TEXT)");
-    jdbc.execute("CREATE TABLE IF NOT EXISTS repositorio_consultas (id INTEGER PRIMARY KEY AUTOINCREMENT, id_paciente_regional TEXT, consulta_id TEXT, cedula TEXT, fecha TEXT, sede TEXT, medico TEXT, especialidad TEXT, tipo_consulta TEXT, diagnostico TEXT, tratamiento TEXT, motivo TEXT, evolucion TEXT, resultado TEXT, observaciones TEXT, antecedentes_familiares TEXT, antecedentes_personales TEXT, cirugias TEXT, gineco_embarazos TEXT, gineco_partos TEXT, gineco_cesareas TEXT, gineco_abortos TEXT, gineco_observaciones TEXT, medicamentos_actuales TEXT, alergias TEXT, examen_general TEXT, examen_cabeza_cuello TEXT, examen_torax TEXT, examen_abdomen TEXT, examen_extremidades TEXT, examen_neurologico TEXT, peso TEXT, talla TEXT, imc TEXT, temperatura TEXT, presion_arterial TEXT, frecuencia_cardiaca TEXT, frecuencia_respiratoria TEXT, saturacion_oxigeno TEXT, medicacion TEXT, proximo_control TEXT, fecha_sincronizacion TEXT)");
-    jdbc.execute("CREATE TABLE IF NOT EXISTS repositorio_laboratorios (id INTEGER PRIMARY KEY AUTOINCREMENT, id_paciente_regional TEXT, laboratorio_id TEXT, consulta_id TEXT, cedula TEXT, fecha TEXT, sede TEXT, medico TEXT, especialidad TEXT, tipo_consulta TEXT, diagnostico TEXT, tratamiento TEXT, motivo TEXT, evolucion TEXT, tipo_examen TEXT, resultado TEXT, observaciones_medicas TEXT, estado TEXT, prioridad TEXT, tecnologo_responsable TEXT, fecha_solicitud TEXT, fecha_resultado TEXT, valores TEXT, unidad TEXT, valor_referencia TEXT, interpretacion TEXT, codigo_muestra TEXT, resultado_critico TEXT, hora_resultado TEXT, fecha_validacion TEXT, usuario_valido TEXT, observaciones_laboratorio TEXT, fecha_sincronizacion TEXT)");
-    jdbc.execute("CREATE TABLE IF NOT EXISTS repositorio_imagenologia (id INTEGER PRIMARY KEY AUTOINCREMENT, id_paciente_regional TEXT, imagenologia_id TEXT, consulta_id TEXT, cedula TEXT, fecha TEXT, sede TEXT, medico TEXT, especialidad TEXT, tipo_consulta TEXT, diagnostico TEXT, resultado TEXT, observaciones_medicas TEXT, tipo_estudio TEXT, formato TEXT, url TEXT, region_anatomica TEXT, estado TEXT, prioridad TEXT, tecnico_responsable TEXT, hora TEXT, fecha_solicitud TEXT, fecha_realizacion TEXT, observaciones_imagenologo TEXT, hallazgos TEXT, recomendaciones TEXT, fecha_sincronizacion TEXT)");
-    jdbc.execute("CREATE INDEX IF NOT EXISTS idx_repo_pacientes_regional ON repositorio_pacientes(id_paciente_regional)");
-    jdbc.execute("CREATE INDEX IF NOT EXISTS idx_repo_consultas_regional ON repositorio_consultas(id_paciente_regional)");
-    jdbc.execute("CREATE INDEX IF NOT EXISTS idx_repo_labs_regional ON repositorio_laboratorios(id_paciente_regional)");
-    jdbc.execute("CREATE INDEX IF NOT EXISTS idx_repo_img_regional ON repositorio_imagenologia(id_paciente_regional)");
+    jdbc.execute("CREATE TABLE IF NOT EXISTS repositorio_clinico (id INTEGER PRIMARY KEY AUTOINCREMENT, tipo_registro TEXT NOT NULL, id_paciente_regional TEXT, registro_origen_id TEXT, consulta_id TEXT, cedula TEXT, nombres TEXT, apellidos TEXT, fecha_nacimiento TEXT, edad TEXT, sexo TEXT, estado_civil TEXT, direccion TEXT, provincia TEXT, ciudad TEXT, telefono TEXT, correo TEXT, contacto_emergencia TEXT, seguro TEXT, tipo_sangre TEXT, nacionalidad TEXT, fecha TEXT, sede TEXT, medico TEXT, especialidad TEXT, tipo_consulta TEXT, diagnostico TEXT, tratamiento TEXT, motivo TEXT, evolucion TEXT, resultado TEXT, observaciones TEXT, antecedentes_familiares TEXT, antecedentes_personales TEXT, cirugias TEXT, gineco_embarazos TEXT, gineco_partos TEXT, gineco_cesareas TEXT, gineco_abortos TEXT, gineco_observaciones TEXT, medicamentos_actuales TEXT, alergias TEXT, examen_general TEXT, examen_cabeza_cuello TEXT, examen_torax TEXT, examen_abdomen TEXT, examen_extremidades TEXT, examen_neurologico TEXT, peso TEXT, talla TEXT, imc TEXT, temperatura TEXT, presion_arterial TEXT, frecuencia_cardiaca TEXT, frecuencia_respiratoria TEXT, saturacion_oxigeno TEXT, medicacion TEXT, proximo_control TEXT, tipo_examen TEXT, estado TEXT, prioridad TEXT, tecnologo_responsable TEXT, fecha_solicitud TEXT, fecha_resultado TEXT, valores TEXT, unidad TEXT, valor_referencia TEXT, interpretacion TEXT, codigo_muestra TEXT, resultado_critico TEXT, hora_resultado TEXT, fecha_validacion TEXT, usuario_valido TEXT, observaciones_laboratorio TEXT, tipo_estudio TEXT, formato TEXT, url TEXT, region_anatomica TEXT, tecnico_responsable TEXT, hora TEXT, fecha_realizacion TEXT, observaciones_imagenologo TEXT, hallazgos TEXT, recomendaciones TEXT, fecha_sincronizacion TEXT)");
+    jdbc.execute("CREATE INDEX IF NOT EXISTS idx_repositorio_clinico_regional ON repositorio_clinico(id_paciente_regional)");
+    jdbc.execute("CREATE INDEX IF NOT EXISTS idx_repositorio_clinico_tipo ON repositorio_clinico(tipo_registro)");
+    jdbc.execute("DROP TABLE IF EXISTS repositorio_pacientes");
+    jdbc.execute("DROP TABLE IF EXISTS repositorio_consultas");
+    jdbc.execute("DROP TABLE IF EXISTS repositorio_laboratorios");
+    jdbc.execute("DROP TABLE IF EXISTS repositorio_imagenologia");
     jdbc.execute("CREATE TABLE IF NOT EXISTS configuracion_repositorio (clave TEXT PRIMARY KEY, valor TEXT NOT NULL)");
   }
 
@@ -294,30 +293,154 @@ class RepositorioService {
   }
 
   void guardarRepositorioCentral(String idRegional, Map<String,Object> paciente, List<?> consultas, List<?> laboratorios, List<?> imagenologia) {
-    jdbc.update("DELETE FROM repositorio_pacientes WHERE id_paciente_regional=?", idRegional);
-    jdbc.update("DELETE FROM repositorio_consultas WHERE id_paciente_regional=?", idRegional);
-    jdbc.update("DELETE FROM repositorio_laboratorios WHERE id_paciente_regional=?", idRegional);
-    jdbc.update("DELETE FROM repositorio_imagenologia WHERE id_paciente_regional=?", idRegional);
+    jdbc.update("DELETE FROM repositorio_clinico WHERE id_paciente_regional=?", idRegional);
     String ahora = LocalDateTime.now().toString();
     if (!paciente.isEmpty()) {
-      jdbc.update("INSERT INTO repositorio_pacientes(id_paciente_regional,cedula,nombres,apellidos,fecha_nacimiento,edad,sexo,estado_civil,direccion,provincia,ciudad,telefono,correo,contacto_emergencia,seguro,tipo_sangre,nacionalidad,observaciones,sede,fecha_sincronizacion) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-        idRegional, valor(paciente, "cedula"), valor(paciente, "nombres"), valor(paciente, "apellidos"), valor(paciente, "fechaNacimiento"), valor(paciente, "edad"), valor(paciente, "sexo"), valor(paciente, "estadoCivil"), valor(paciente, "direccion"), valor(paciente, "provincia"), valor(paciente, "ciudad"), valor(paciente, "telefono"), valor(paciente, "correo"), valor(paciente, "contactoEmergencia"), valor(paciente, "seguro"), valor(paciente, "tipoSangre"), valor(paciente, "nacionalidad"), valor(paciente, "observaciones"), valor(paciente, "sede"), ahora);
+      Map<String,Object> row = baseRepositorio("PACIENTE", idRegional, ahora);
+      row.put("cedula", valor(paciente, "cedula"));
+      row.put("nombres", valor(paciente, "nombres"));
+      row.put("apellidos", valor(paciente, "apellidos"));
+      row.put("fecha_nacimiento", valor(paciente, "fechaNacimiento"));
+      row.put("edad", valor(paciente, "edad"));
+      row.put("sexo", valor(paciente, "sexo"));
+      row.put("estado_civil", valor(paciente, "estadoCivil"));
+      row.put("direccion", valor(paciente, "direccion"));
+      row.put("provincia", valor(paciente, "provincia"));
+      row.put("ciudad", valor(paciente, "ciudad"));
+      row.put("telefono", valor(paciente, "telefono"));
+      row.put("correo", valor(paciente, "correo"));
+      row.put("contacto_emergencia", valor(paciente, "contactoEmergencia"));
+      row.put("seguro", valor(paciente, "seguro"));
+      row.put("tipo_sangre", valor(paciente, "tipoSangre"));
+      row.put("nacionalidad", valor(paciente, "nacionalidad"));
+      row.put("observaciones", valor(paciente, "observaciones"));
+      row.put("sede", valor(paciente, "sede"));
+      insertarRepositorio(row);
     }
     for (Object item : consultas) {
       Map<String,Object> row = comoMapa(item);
-      jdbc.update("INSERT INTO repositorio_consultas(id_paciente_regional,consulta_id,cedula,fecha,sede,medico,especialidad,tipo_consulta,diagnostico,tratamiento,motivo,evolucion,resultado,observaciones,antecedentes_familiares,antecedentes_personales,cirugias,gineco_embarazos,gineco_partos,gineco_cesareas,gineco_abortos,gineco_observaciones,medicamentos_actuales,alergias,examen_general,examen_cabeza_cuello,examen_torax,examen_abdomen,examen_extremidades,examen_neurologico,peso,talla,imc,temperatura,presion_arterial,frecuencia_cardiaca,frecuencia_respiratoria,saturacion_oxigeno,medicacion,proximo_control,fecha_sincronizacion) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-        idRegional, valor(row, "id"), valor(row, "cedula"), valor(row, "fecha"), valor(row, "sede"), valor(row, "medico"), valor(row, "especialidad"), valor(row, "tipoConsulta"), valor(row, "diagnostico"), valor(row, "tratamiento"), valor(row, "motivo"), valor(row, "evolucion"), valor(row, "resultado"), valor(row, "observaciones"), valor(row, "antecedentesFamiliares"), valor(row, "antecedentesPersonales"), valor(row, "cirugias"), valor(row, "ginecoEmbarazos"), valor(row, "ginecoPartos"), valor(row, "ginecoCesareas"), valor(row, "ginecoAbortos"), valor(row, "ginecoObservaciones"), valor(row, "medicamentosActuales"), valor(row, "alergias"), valor(row, "examenGeneral"), valor(row, "examenCabezaCuello"), valor(row, "examenTorax"), valor(row, "examenAbdomen"), valor(row, "examenExtremidades"), valor(row, "examenNeurologico"), valor(row, "peso"), valor(row, "talla"), valor(row, "imc"), valor(row, "temperatura"), valor(row, "presionArterial"), valor(row, "frecuenciaCardiaca"), valor(row, "frecuenciaRespiratoria"), valor(row, "saturacionOxigeno"), valor(row, "medicacion"), valor(row, "proximoControl"), ahora);
+      Map<String,Object> central = baseRepositorio("CONSULTA", idRegional, ahora);
+      central.put("registro_origen_id", valor(row, "id"));
+      central.put("consulta_id", valor(row, "id"));
+      central.put("cedula", valor(row, "cedula"));
+      central.put("fecha", valor(row, "fecha"));
+      central.put("sede", valor(row, "sede"));
+      central.put("medico", valor(row, "medico"));
+      central.put("especialidad", valor(row, "especialidad"));
+      central.put("tipo_consulta", valor(row, "tipoConsulta"));
+      central.put("diagnostico", valor(row, "diagnostico"));
+      central.put("tratamiento", valor(row, "tratamiento"));
+      central.put("motivo", valor(row, "motivo"));
+      central.put("evolucion", valor(row, "evolucion"));
+      central.put("resultado", valor(row, "resultado"));
+      central.put("observaciones", valor(row, "observaciones"));
+      central.put("antecedentes_familiares", valor(row, "antecedentesFamiliares"));
+      central.put("antecedentes_personales", valor(row, "antecedentesPersonales"));
+      central.put("cirugias", valor(row, "cirugias"));
+      central.put("gineco_embarazos", valor(row, "ginecoEmbarazos"));
+      central.put("gineco_partos", valor(row, "ginecoPartos"));
+      central.put("gineco_cesareas", valor(row, "ginecoCesareas"));
+      central.put("gineco_abortos", valor(row, "ginecoAbortos"));
+      central.put("gineco_observaciones", valor(row, "ginecoObservaciones"));
+      central.put("medicamentos_actuales", valor(row, "medicamentosActuales"));
+      central.put("alergias", valor(row, "alergias"));
+      central.put("examen_general", valor(row, "examenGeneral"));
+      central.put("examen_cabeza_cuello", valor(row, "examenCabezaCuello"));
+      central.put("examen_torax", valor(row, "examenTorax"));
+      central.put("examen_abdomen", valor(row, "examenAbdomen"));
+      central.put("examen_extremidades", valor(row, "examenExtremidades"));
+      central.put("examen_neurologico", valor(row, "examenNeurologico"));
+      central.put("peso", valor(row, "peso"));
+      central.put("talla", valor(row, "talla"));
+      central.put("imc", valor(row, "imc"));
+      central.put("temperatura", valor(row, "temperatura"));
+      central.put("presion_arterial", valor(row, "presionArterial"));
+      central.put("frecuencia_cardiaca", valor(row, "frecuenciaCardiaca"));
+      central.put("frecuencia_respiratoria", valor(row, "frecuenciaRespiratoria"));
+      central.put("saturacion_oxigeno", valor(row, "saturacionOxigeno"));
+      central.put("medicacion", valor(row, "medicacion"));
+      central.put("proximo_control", valor(row, "proximoControl"));
+      insertarRepositorio(central);
     }
     for (Object item : laboratorios) {
       Map<String,Object> row = comoMapa(item);
-      jdbc.update("INSERT INTO repositorio_laboratorios(id_paciente_regional,laboratorio_id,consulta_id,cedula,fecha,sede,medico,especialidad,tipo_consulta,diagnostico,tratamiento,motivo,evolucion,tipo_examen,resultado,observaciones_medicas,estado,prioridad,tecnologo_responsable,fecha_solicitud,fecha_resultado,valores,unidad,valor_referencia,interpretacion,codigo_muestra,resultado_critico,hora_resultado,fecha_validacion,usuario_valido,observaciones_laboratorio,fecha_sincronizacion) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-        idRegional, valor(row, "id"), valor(row, "consultaId"), valor(row, "cedula"), valor(row, "fecha"), valor(row, "sede"), valor(row, "medico"), valor(row, "especialidad"), valor(row, "tipoConsulta"), valor(row, "diagnostico"), valor(row, "tratamiento"), valor(row, "motivo"), valor(row, "evolucion"), valor(row, "tipoExamen"), valor(row, "resultado"), valor(row, "observaciones"), valor(row, "estado"), valor(row, "prioridad"), valor(row, "tecnologoResponsable"), valor(row, "fechaSolicitud"), valor(row, "fechaResultado"), valor(row, "valores"), valor(row, "unidad"), valor(row, "valorReferencia"), valor(row, "interpretacion"), valor(row, "codigoMuestra"), valor(row, "resultadoCritico"), valor(row, "horaResultado"), valor(row, "fechaValidacion"), valor(row, "usuarioValido"), valor(row, "observacionesLaboratorio"), ahora);
+      Map<String,Object> central = baseRepositorio("LABORATORIO", idRegional, ahora);
+      central.put("registro_origen_id", valor(row, "id"));
+      central.put("consulta_id", valor(row, "consultaId"));
+      central.put("cedula", valor(row, "cedula"));
+      central.put("fecha", valor(row, "fecha"));
+      central.put("sede", valor(row, "sede"));
+      central.put("medico", valor(row, "medico"));
+      central.put("especialidad", valor(row, "especialidad"));
+      central.put("tipo_consulta", valor(row, "tipoConsulta"));
+      central.put("diagnostico", valor(row, "diagnostico"));
+      central.put("tratamiento", valor(row, "tratamiento"));
+      central.put("motivo", valor(row, "motivo"));
+      central.put("evolucion", valor(row, "evolucion"));
+      central.put("tipo_examen", valor(row, "tipoExamen"));
+      central.put("resultado", valor(row, "resultado"));
+      central.put("observaciones", valor(row, "observaciones"));
+      central.put("estado", valor(row, "estado"));
+      central.put("prioridad", valor(row, "prioridad"));
+      central.put("tecnologo_responsable", valor(row, "tecnologoResponsable"));
+      central.put("fecha_solicitud", valor(row, "fechaSolicitud"));
+      central.put("fecha_resultado", valor(row, "fechaResultado"));
+      central.put("valores", valor(row, "valores"));
+      central.put("unidad", valor(row, "unidad"));
+      central.put("valor_referencia", valor(row, "valorReferencia"));
+      central.put("interpretacion", valor(row, "interpretacion"));
+      central.put("codigo_muestra", valor(row, "codigoMuestra"));
+      central.put("resultado_critico", valor(row, "resultadoCritico"));
+      central.put("hora_resultado", valor(row, "horaResultado"));
+      central.put("fecha_validacion", valor(row, "fechaValidacion"));
+      central.put("usuario_valido", valor(row, "usuarioValido"));
+      central.put("observaciones_laboratorio", valor(row, "observacionesLaboratorio"));
+      insertarRepositorio(central);
     }
     for (Object item : imagenologia) {
       Map<String,Object> row = comoMapa(item);
-      jdbc.update("INSERT INTO repositorio_imagenologia(id_paciente_regional,imagenologia_id,consulta_id,cedula,fecha,sede,medico,especialidad,tipo_consulta,diagnostico,resultado,observaciones_medicas,tipo_estudio,formato,url,region_anatomica,estado,prioridad,tecnico_responsable,hora,fecha_solicitud,fecha_realizacion,observaciones_imagenologo,hallazgos,recomendaciones,fecha_sincronizacion) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-        idRegional, valor(row, "id"), valor(row, "consultaId"), valor(row, "cedula"), valor(row, "fecha"), valor(row, "sede"), valor(row, "medico"), valor(row, "especialidad"), valor(row, "tipoConsulta"), valor(row, "diagnostico"), valor(row, "resultado"), valor(row, "observaciones"), valor(row, "tipoEstudio"), valor(row, "formato"), valor(row, "url"), valor(row, "regionAnatomica"), valor(row, "estado"), valor(row, "prioridad"), valor(row, "tecnicoResponsable"), valor(row, "hora"), valor(row, "fechaSolicitud"), valor(row, "fechaRealizacion"), valor(row, "observacionesImagenologo"), valor(row, "hallazgos"), primerValorNoVacio(valor(row, "recomendaciones"), "No registradas"), ahora);
+      Map<String,Object> central = baseRepositorio("IMAGENOLOGIA", idRegional, ahora);
+      central.put("registro_origen_id", valor(row, "id"));
+      central.put("consulta_id", valor(row, "consultaId"));
+      central.put("cedula", valor(row, "cedula"));
+      central.put("fecha", valor(row, "fecha"));
+      central.put("sede", valor(row, "sede"));
+      central.put("medico", valor(row, "medico"));
+      central.put("especialidad", valor(row, "especialidad"));
+      central.put("tipo_consulta", valor(row, "tipoConsulta"));
+      central.put("diagnostico", valor(row, "diagnostico"));
+      central.put("resultado", valor(row, "resultado"));
+      central.put("observaciones", valor(row, "observaciones"));
+      central.put("tipo_estudio", valor(row, "tipoEstudio"));
+      central.put("formato", valor(row, "formato"));
+      central.put("url", valor(row, "url"));
+      central.put("region_anatomica", valor(row, "regionAnatomica"));
+      central.put("estado", valor(row, "estado"));
+      central.put("prioridad", valor(row, "prioridad"));
+      central.put("tecnico_responsable", valor(row, "tecnicoResponsable"));
+      central.put("hora", valor(row, "hora"));
+      central.put("fecha_solicitud", valor(row, "fechaSolicitud"));
+      central.put("fecha_realizacion", valor(row, "fechaRealizacion"));
+      central.put("observaciones_imagenologo", valor(row, "observacionesImagenologo"));
+      central.put("hallazgos", valor(row, "hallazgos"));
+      central.put("recomendaciones", primerValorNoVacio(valor(row, "recomendaciones"), "No registradas"));
+      insertarRepositorio(central);
     }
+  }
+
+  Map<String,Object> baseRepositorio(String tipo, String idRegional, String ahora) {
+    Map<String,Object> row = new LinkedHashMap<>();
+    row.put("tipo_registro", tipo);
+    row.put("id_paciente_regional", idRegional);
+    row.put("fecha_sincronizacion", ahora);
+    return row;
+  }
+
+  void insertarRepositorio(Map<String,Object> valores) {
+    List<String> columnas = new ArrayList<>(valores.keySet());
+    String placeholders = String.join(",", Collections.nCopies(columnas.size(), "?"));
+    Object[] args = columnas.stream().map(valores::get).toArray();
+    jdbc.update("INSERT INTO repositorio_clinico(" + String.join(",", columnas) + ") VALUES (" + placeholders + ")", args);
   }
 
   Map<String,Object> comoMapa(Object value) {
