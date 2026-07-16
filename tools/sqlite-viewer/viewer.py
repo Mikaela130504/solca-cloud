@@ -40,7 +40,7 @@ def safe_db(name):
     return db_files()[0] if db_files() else None
 
 
-def query_rows(db_path, table, type_filter=""):
+def query_rows(db_path, table):
     with sqlite3.connect(db_path) as conn:
         conn.row_factory = sqlite3.Row
         tables = visible_tables(conn)
@@ -50,13 +50,8 @@ def query_rows(db_path, table, type_filter=""):
         columns = []
         if table:
             quoted = '"' + table.replace('"', '""') + '"'
-            params = []
-            where = ""
-            if table == "repositorio_clinico" and type_filter:
-                where = " WHERE tipo_registro=?"
-                params.append(type_filter)
             order = " ORDER BY id DESC" if table == "repositorio_clinico" else ""
-            rows = conn.execute(f"SELECT * FROM {quoted}{where}{order} LIMIT 200", params).fetchall()
+            rows = conn.execute(f"SELECT * FROM {quoted}{order} LIMIT 500").fetchall()
             columns = rows[0].keys() if rows else [r[1] for r in conn.execute(f"PRAGMA table_info({quoted})")]
             if table == "auditorias":
                 columns = [col for col in columns if col != "id"]
@@ -69,18 +64,58 @@ def query_rows(db_path, table, type_filter=""):
         return tables, table, columns, rows
 
 
-def repository_types(db_path, table):
-    if table != "repositorio_clinico":
-        return []
-    with sqlite3.connect(db_path) as conn:
-        return [
-            r[0]
-            for r in conn.execute(
-                "SELECT DISTINCT tipo_registro FROM repositorio_clinico "
-                "WHERE tipo_registro IS NOT NULL AND TRIM(tipo_registro) <> '' "
-                "ORDER BY tipo_registro"
-            )
-        ]
+def pretty_name(name):
+    return str(name).replace("_", " ").strip().title()
+
+
+def row_value(row, key):
+    try:
+        value = row[key]
+    except (KeyError, IndexError):
+        return ""
+    return "" if value is None else str(value).strip()
+
+
+def render_pairs(row, skip):
+    pairs = []
+    for key in row.keys():
+        if key in skip:
+            continue
+        value = row_value(row, key)
+        if value:
+            pairs.append(f"<dt>{escape(pretty_name(key))}</dt><dd>{escape(value)}</dd>")
+    return "<dl class=\"record-grid\">" + "".join(pairs) + "</dl>" if pairs else "<p>Sin detalle registrado.</p>"
+
+
+def repository_view(rows):
+    clinical = [row for row in rows if row_value(row, "tipo_registro") in {"PACIENTE", "CONSULTA", "LABORATORIO", "IMAGENOLOGIA", "CACHE_CLINICA"}]
+    operational = [row for row in rows if row_value(row, "tipo_registro") not in {"PACIENTE", "CONSULTA", "LABORATORIO", "IMAGENOLOGIA", "CACHE_CLINICA"}]
+    grouped = {}
+    for row in clinical:
+        patient = row_value(row, "id_paciente_regional") or "Sin paciente"
+        grouped.setdefault(patient, []).append(row)
+    parts = ["""
+      <p class="hint">Vista consolidada de la única tabla <strong>repositorio_clinico</strong>. Se muestran todos los datos no vacíos sincronizados desde Paciente Maestro, Consulta, Laboratorio e Imagenología.</p>
+    """]
+    for patient, patient_rows in sorted(grouped.items()):
+        patient_info = next((r for r in patient_rows if row_value(r, "tipo_registro") == "PACIENTE"), None)
+        title = patient
+        if patient_info:
+            full_name = f"{row_value(patient_info, 'nombres')} {row_value(patient_info, 'apellidos')}".strip()
+            if full_name:
+                title = f"{patient} - {full_name}"
+        parts.append(f"<article class=\"patient-block\"><h3>{escape(title)}</h3>")
+        for row in patient_rows:
+            record_type = row_value(row, "tipo_registro")
+            parts.append(f"<div class=\"record\"><h4>{escape(record_type)}</h4>{render_pairs(row, {'id', 'tipo_registro', 'id_paciente_regional'})}</div>")
+        parts.append("</article>")
+    if operational:
+        parts.append("<article class=\"patient-block\"><h3>Información operativa del repositorio</h3>")
+        for row in operational:
+            record_type = row_value(row, "tipo_registro")
+            parts.append(f"<div class=\"record\"><h4>{escape(record_type)}</h4>{render_pairs(row, {'id', 'tipo_registro'})}</div>")
+        parts.append("</article>")
+    return "".join(parts)
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -91,36 +126,28 @@ class Handler(BaseHTTPRequestHandler):
         if not db_path:
             self.respond("<h1>SOLCA SQLite Viewer</h1><p>No hay bases SQLite montadas en /data.</p>")
             return
-        type_filter = params.get("tipo", [""])[0]
         requested_table = params.get("table", [""])[0]
-        if db_path.name == "RepositorioClinico.sqlite" and requested_table in ("", "repositorio_clinico") and not type_filter:
-            type_filter = "PACIENTE"
-        tables, table, columns, rows = query_rows(db_path, requested_table, type_filter)
-        types = repository_types(db_path, table)
+        tables, table, columns, rows = query_rows(db_path, requested_table)
         db_links = " ".join(f'<a class="pill" href="/?db={escape(p.name)}">{escape(p.name)}</a>' for p in db_files())
         table_links = " ".join(f'<a class="pill" href="/?db={escape(db_path.name)}&table={escape(t)}">{escape(t)}</a>' for t in tables)
-        type_links = ""
-        if types:
-            current = escape(type_filter or "TODOS")
-            links = [f'<a class="pill" href="/?db={escape(db_path.name)}&table={escape(table)}">TODOS</a>']
-            links.extend(
-                f'<a class="pill" href="/?db={escape(db_path.name)}&table={escape(table)}&tipo={escape(t)}">{escape(t)}</a>'
-                for t in types
+        if table == "repositorio_clinico":
+            table_content = repository_view(rows)
+        else:
+            header = "".join(f"<th>{escape(str(col))}</th>" for col in columns)
+            body = "".join(
+                "<tr>" + "".join(f"<td>{escape(str(row[col]) if row[col] is not None else '')}</td>" for col in columns) + "</tr>"
+                for row in rows
             )
-            type_links = f'<section><h2>Filtro tipo_registro: {current}</h2>{" ".join(links)}</section>'
-        header = "".join(f"<th>{escape(str(col))}</th>" for col in columns)
-        body = "".join(
-            "<tr>" + "".join(f"<td>{escape(str(row[col]) if row[col] is not None else '')}</td>" for col in columns) + "</tr>"
-            for row in rows
-        )
+            table_content = f"""
+              <div class="table-wrap"><table><thead><tr>{header}</tr></thead><tbody>{body}</tbody></table></div>
+              <p>Se muestran máximo 500 registros.</p>
+            """
         html = f"""
         <h1>SOLCA SQLite Viewer</h1>
         <section><h2>Bases</h2>{db_links}</section>
         <section><h2>Tablas de {escape(db_path.name)}</h2>{table_links or '<p>Sin tablas.</p>'}</section>
-        {type_links}
         <section><h2>{escape(table or 'Sin tabla')}</h2>
-          <div class="table-wrap"><table><thead><tr>{header}</tr></thead><tbody>{body}</tbody></table></div>
-          <p>Se muestran máximo 200 registros. En repositorio_clinico se ocultan columnas totalmente vacías para evitar espacios en blanco.</p>
+          {table_content}
         </section>
         """
         self.respond(html)
@@ -139,6 +166,15 @@ class Handler(BaseHTTPRequestHandler):
           table {{ min-width: 100%; border-collapse: collapse; }}
           th, td {{ padding: 10px; border-bottom: 1px solid #e3ebf3; text-align: left; white-space: nowrap; }}
           th {{ background: #eef7fd; }}
+          .hint {{ color: #526179; }}
+          .patient-block {{ margin: 18px 0; padding: 14px; border: 1px solid #d9e6f0; border-radius: 8px; background: #fbfdff; }}
+          .patient-block h3 {{ margin: 0 0 12px; color: #0a4770; }}
+          .record {{ margin: 12px 0; padding: 12px; border-left: 4px solid #0a77a8; background: white; }}
+          .record h4 {{ margin: 0 0 10px; color: #172033; }}
+          .record-grid {{ display: grid; grid-template-columns: minmax(160px, 260px) 1fr; gap: 8px 14px; margin: 0; }}
+          .record-grid dt {{ font-weight: 700; color: #334155; }}
+          .record-grid dd {{ margin: 0; overflow-wrap: anywhere; }}
+          @media (max-width: 720px) {{ .record-grid {{ grid-template-columns: 1fr; }} }}
         </style></head><body>{content}</body></html>"""
         encoded = page.encode("utf-8")
         self.send_response(200)
