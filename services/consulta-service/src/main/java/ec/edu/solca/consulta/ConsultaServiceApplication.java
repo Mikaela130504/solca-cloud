@@ -331,6 +331,13 @@ class RegistroRepository {
     String[] parts = diagnostico.split(" - ", 2);
     return parts.length == 2 ? parts[1].trim() : diagnostico.trim();
   }
+
+  String primerValorNoVacio(String... values) {
+    for (String value : values) {
+      if (value != null && !value.isBlank()) return value.trim();
+    }
+    return "";
+  }
 }
 
 record DiagnosticoParts(String codigoPrincipal, String nombrePrincipal) {}
