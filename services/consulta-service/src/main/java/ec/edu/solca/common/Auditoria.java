@@ -75,7 +75,10 @@ public class Auditoria {
 
   private static String usuario() {
     var auth = SecurityContextHolder.getContext().getAuthentication();
-    return auth == null ? "anonimo" : auth.getName();
+    if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getName())) return "anonimo";
+    Object details = auth.getDetails();
+    if (details instanceof String name && !name.isBlank()) return name;
+    return auth.getName();
   }
 
   private static String rol() {
@@ -108,7 +111,13 @@ public class Auditoria {
   private static String paciente(HttpServletRequest request) {
     String path = request.getRequestURI();
     if (path.contains("/paciente/")) return path.substring(path.lastIndexOf("/paciente/") + 10);
+    if (path.matches(".*/pacientes/[^/]+$")) return path.substring(path.lastIndexOf("/") + 1);
+    if (path.matches(".*/laboratorios/paciente/[^/]+$")) return path.substring(path.lastIndexOf("/") + 1);
+    if (path.matches(".*/imagenologia/paciente/[^/]+$")) return path.substring(path.lastIndexOf("/") + 1);
+    if (path.matches(".*/repositorio-clinico/[^/]+$")) return path.substring(path.lastIndexOf("/") + 1);
     String paciente = request.getParameter("paciente");
+    if (paciente == null || paciente.isBlank()) paciente = request.getParameter("idPacienteRegional");
+    if (paciente == null || paciente.isBlank()) paciente = request.getParameter("cedula");
     return paciente == null || paciente.isBlank() ? null : paciente;
   }
 }

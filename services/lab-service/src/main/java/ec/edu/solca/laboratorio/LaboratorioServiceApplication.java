@@ -62,7 +62,7 @@ class RegistroRepository {
   JdbcTemplate jdbc() { return jdbc; }
   void schema() {
     jdbc.execute("CREATE TABLE IF NOT EXISTS resultados_laboratorio (id INTEGER PRIMARY KEY AUTOINCREMENT, id_paciente_regional TEXT, cedula TEXT NOT NULL, fecha TEXT NOT NULL, sede TEXT NOT NULL, medico TEXT, especialidad TEXT, tipo_consulta TEXT, diagnostico TEXT, tratamiento TEXT, motivo TEXT, evolucion TEXT, tipo_examen TEXT, resultado TEXT, observaciones TEXT)");
-    jdbc.update("UPDATE resultados_laboratorio SET sede='SOLCA Quito' WHERE sede IS NULL OR TRIM(sede) = '' OR sede NOT IN ('SOLCA Cuenca','SOLCA Quito','SOLCA Manabí')");
+    jdbc.update("UPDATE resultados_laboratorio SET sede='SOLCA Quito' WHERE sede IS NULL OR TRIM(sede) = '' OR sede NOT IN ('SOLCA Cuenca','SOLCA Quito','SOLCA Guayaquil')");
     agregarColumna("resultados_laboratorio", "estado", "TEXT DEFAULT 'PENDIENTE'");
     agregarColumna("resultados_laboratorio", "prioridad", "TEXT DEFAULT 'NORMAL'");
     agregarColumna("resultados_laboratorio", "tecnologo_responsable", "TEXT");
@@ -154,10 +154,10 @@ class RegistroRepository {
 }
 
 class Sedes {
-  static final List<String> OFICIALES = List.of("SOLCA Cuenca", "SOLCA Quito", "SOLCA Manabí");
+  static final List<String> OFICIALES = List.of("SOLCA Cuenca", "SOLCA Quito", "SOLCA Guayaquil");
   static void validar(String sede) {
     if (sede == null || !OFICIALES.contains(sede.trim())) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sede inválida. Use SOLCA Cuenca, SOLCA Quito o SOLCA Manabí.");
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sede inválida. Use SOLCA Cuenca, SOLCA Quito o SOLCA Guayaquil.");
     }
   }
 }

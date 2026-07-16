@@ -75,8 +75,8 @@ class PacienteRepository {
   void schema() {
     jdbc.execute("CREATE TABLE IF NOT EXISTS pacientes (id INTEGER PRIMARY KEY AUTOINCREMENT, id_paciente_regional TEXT NOT NULL UNIQUE, cedula TEXT NOT NULL UNIQUE, nombres TEXT NOT NULL, apellidos TEXT NOT NULL, fecha_nacimiento TEXT NOT NULL, edad INTEGER, sexo TEXT NOT NULL, estado_civil TEXT NOT NULL, direccion TEXT NOT NULL, provincia TEXT NOT NULL, ciudad TEXT NOT NULL, telefono TEXT NOT NULL, correo TEXT NOT NULL, contacto_emergencia TEXT NOT NULL, seguro TEXT NOT NULL, tipo_sangre TEXT NOT NULL, nacionalidad TEXT NOT NULL, observaciones TEXT, sede TEXT)");
     jdbc.execute("CREATE TABLE IF NOT EXISTS historias_clinicas_locales (id INTEGER PRIMARY KEY AUTOINCREMENT, id_paciente_regional TEXT NOT NULL, sede TEXT NOT NULL, identificador_historia_local TEXT NOT NULL, UNIQUE(sede, identificador_historia_local), FOREIGN KEY(id_paciente_regional) REFERENCES pacientes(id_paciente_regional))");
-    jdbc.update("UPDATE pacientes SET sede='SOLCA Quito' WHERE sede IS NULL OR TRIM(sede) = '' OR sede NOT IN ('SOLCA Cuenca','SOLCA Quito','SOLCA Manabí')");
-    jdbc.update("DELETE FROM historias_clinicas_locales WHERE sede NOT IN ('SOLCA Cuenca','SOLCA Quito','SOLCA Manabí')");
+    jdbc.update("UPDATE pacientes SET sede='SOLCA Quito' WHERE sede IS NULL OR TRIM(sede) = '' OR sede NOT IN ('SOLCA Cuenca','SOLCA Quito','SOLCA Guayaquil')");
+    jdbc.update("DELETE FROM historias_clinicas_locales WHERE sede NOT IN ('SOLCA Cuenca','SOLCA Quito','SOLCA Guayaquil')");
     jdbc.execute("CREATE INDEX IF NOT EXISTS idx_pacientes_cedula ON pacientes(cedula)");
     Auditoria.crearTabla(jdbc);
   }
@@ -122,7 +122,7 @@ class PacienteRepository {
     }
   }
   void normalizarSedesSinDato() {
-    jdbc.update("UPDATE pacientes SET sede='SOLCA Quito' WHERE sede IS NULL OR TRIM(sede) = '' OR sede NOT IN ('SOLCA Cuenca','SOLCA Quito','SOLCA Manabí')");
+    jdbc.update("UPDATE pacientes SET sede='SOLCA Quito' WHERE sede IS NULL OR TRIM(sede) = '' OR sede NOT IN ('SOLCA Cuenca','SOLCA Quito','SOLCA Guayaquil')");
   }
   List<PacienteDto> listar(String q) { String like = "%" + q + "%"; return jdbc.query("SELECT * FROM pacientes WHERE nombres LIKE ? OR apellidos LIKE ? OR cedula LIKE ? OR id_paciente_regional LIKE ? ORDER BY apellidos,nombres", this::map, like, like, like, like); }
   Optional<PacienteDto> porCedula(String cedula) { return jdbc.query("SELECT * FROM pacientes WHERE cedula=?", this::map, cedula).stream().findFirst(); }
@@ -133,10 +133,10 @@ class PacienteRepository {
 }
 
 class Sedes {
-  static final List<String> OFICIALES = List.of("SOLCA Cuenca", "SOLCA Quito", "SOLCA Manabí");
+  static final List<String> OFICIALES = List.of("SOLCA Cuenca", "SOLCA Quito", "SOLCA Guayaquil");
   static void validar(String sede) {
     if (sede == null || !OFICIALES.contains(sede.trim())) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sede inválida. Use SOLCA Cuenca, SOLCA Quito o SOLCA Manabí.");
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sede inválida. Use SOLCA Cuenca, SOLCA Quito o SOLCA Guayaquil.");
     }
   }
 }

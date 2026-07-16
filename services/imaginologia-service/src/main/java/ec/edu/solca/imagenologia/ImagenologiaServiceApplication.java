@@ -166,7 +166,7 @@ class RegistroRepository {
   JdbcTemplate jdbc() { return jdbc; }
   void schema() {
     jdbc.execute("CREATE TABLE IF NOT EXISTS estudios_imagenologia (id INTEGER PRIMARY KEY AUTOINCREMENT, id_paciente_regional TEXT, cedula TEXT NOT NULL, fecha TEXT NOT NULL, sede TEXT NOT NULL, medico TEXT, especialidad TEXT, tipo_consulta TEXT, diagnostico TEXT, resultado TEXT, observaciones TEXT, tipo_estudio TEXT, formato TEXT, url TEXT, region_anatomica TEXT)");
-    jdbc.update("UPDATE estudios_imagenologia SET sede='SOLCA Quito' WHERE sede IS NULL OR TRIM(sede) = '' OR sede NOT IN ('SOLCA Cuenca','SOLCA Quito','SOLCA Manabí')");
+    jdbc.update("UPDATE estudios_imagenologia SET sede='SOLCA Quito' WHERE sede IS NULL OR TRIM(sede) = '' OR sede NOT IN ('SOLCA Cuenca','SOLCA Quito','SOLCA Guayaquil')");
     agregarColumna("estudios_imagenologia", "estado", "TEXT DEFAULT 'SOLICITADO'");
     agregarColumna("estudios_imagenologia", "prioridad", "TEXT DEFAULT 'NORMAL'");
     agregarColumna("estudios_imagenologia", "observaciones_imagenologo", "TEXT");
@@ -179,6 +179,7 @@ class RegistroRepository {
     agregarColumna("estudios_imagenologia", "fecha_realizacion", "TEXT");
     jdbc.update("UPDATE estudios_imagenologia SET estado='REALIZADO' WHERE estado IS NULL AND url IS NOT NULL AND TRIM(url) <> ''");
     jdbc.update("UPDATE estudios_imagenologia SET estado='SOLICITADO' WHERE estado IS NULL OR TRIM(estado) = ''");
+    jdbc.update("UPDATE estudios_imagenologia SET recomendaciones='No registradas' WHERE recomendaciones IS NULL OR TRIM(recomendaciones) = ''");
     jdbc.update("UPDATE estudios_imagenologia SET fecha_solicitud=? WHERE fecha_solicitud IS NULL OR TRIM(fecha_solicitud) = ''", LocalDateTime.now().toString());
     migrarRegistros("estudios_imagenologia");
     jdbc.execute("CREATE INDEX IF NOT EXISTS idx_estudios_imagenologia_paciente ON estudios_imagenologia(id_paciente_regional)");
@@ -202,7 +203,7 @@ class RegistroRepository {
     String formato = normalizarFormato(r.formato());
     validarUrlArchivo(formato, r.url());
     String fechaRealizacion = "REALIZADO".equals(estado) || "INFORMADO".equals(estado) ? LocalDateTime.now().toString() : null;
-    jdbc.update("INSERT INTO estudios_imagenologia(id_paciente_regional,cedula,fecha,sede,medico,especialidad,tipo_consulta,diagnostico,resultado,observaciones,tipo_estudio,formato,url,region_anatomica,estado,prioridad,tecnico_responsable,hora,fecha_solicitud,fecha_realizacion,observaciones_imagenologo,hallazgos,recomendaciones,consulta_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", normalizarPaciente(r),r.cedula(),r.fecha().toString(),r.sede(),r.medico(),r.especialidad(),r.tipoConsulta(),r.diagnostico(),r.resultado(),r.observaciones(),r.tipoEstudio(),formato,r.url(),r.regionAnatomica(),estado,normalizarPrioridad(r.prioridad()),r.tecnicoResponsable(),normalizarHora(r.hora()),LocalDateTime.now().toString(),fechaRealizacion,r.observacionesImagenologo(),r.hallazgos(),r.recomendaciones(),r.consultaId());
+    jdbc.update("INSERT INTO estudios_imagenologia(id_paciente_regional,cedula,fecha,sede,medico,especialidad,tipo_consulta,diagnostico,resultado,observaciones,tipo_estudio,formato,url,region_anatomica,estado,prioridad,tecnico_responsable,hora,fecha_solicitud,fecha_realizacion,observaciones_imagenologo,hallazgos,recomendaciones,consulta_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", normalizarPaciente(r),r.cedula(),r.fecha().toString(),r.sede(),r.medico(),r.especialidad(),r.tipoConsulta(),r.diagnostico(),r.resultado(),r.observaciones(),r.tipoEstudio(),formato,r.url(),r.regionAnatomica(),estado,normalizarPrioridad(r.prioridad()),r.tecnicoResponsable(),normalizarHora(r.hora()),LocalDateTime.now().toString(),fechaRealizacion,r.observacionesImagenologo(),r.hallazgos(),recomendaciones(r.recomendaciones()),r.consultaId());
     Long id = jdbc.queryForObject("SELECT last_insert_rowid()", Long.class);
     return obtener(id).orElseThrow();
   }
@@ -211,14 +212,14 @@ class RegistroRepository {
     String formato = normalizarFormato(r.formato());
     validarUrlArchivo(formato, r.url());
     String fechaRealizacion = "REALIZADO".equals(estado) || "INFORMADO".equals(estado) ? LocalDateTime.now().toString() : null;
-    int rows = jdbc.update("UPDATE estudios_imagenologia SET id_paciente_regional=?,cedula=?,fecha=?,sede=?,medico=?,especialidad=?,tipo_consulta=?,diagnostico=?,resultado=?,observaciones=?,tipo_estudio=?,formato=?,url=?,region_anatomica=?,estado=?,prioridad=?,tecnico_responsable=?,hora=?,fecha_realizacion=COALESCE(?,fecha_realizacion),observaciones_imagenologo=?,hallazgos=?,recomendaciones=?,consulta_id=? WHERE id=?", normalizarPaciente(r),r.cedula(),r.fecha().toString(),r.sede(),r.medico(),r.especialidad(),r.tipoConsulta(),r.diagnostico(),r.resultado(),r.observaciones(),r.tipoEstudio(),formato,r.url(),r.regionAnatomica(),estado,normalizarPrioridad(r.prioridad()),r.tecnicoResponsable(),normalizarHora(r.hora()),fechaRealizacion,r.observacionesImagenologo(),r.hallazgos(),r.recomendaciones(),r.consultaId(),id);
+    int rows = jdbc.update("UPDATE estudios_imagenologia SET id_paciente_regional=?,cedula=?,fecha=?,sede=?,medico=?,especialidad=?,tipo_consulta=?,diagnostico=?,resultado=?,observaciones=?,tipo_estudio=?,formato=?,url=?,region_anatomica=?,estado=?,prioridad=?,tecnico_responsable=?,hora=?,fecha_realizacion=COALESCE(?,fecha_realizacion),observaciones_imagenologo=?,hallazgos=?,recomendaciones=?,consulta_id=? WHERE id=?", normalizarPaciente(r),r.cedula(),r.fecha().toString(),r.sede(),r.medico(),r.especialidad(),r.tipoConsulta(),r.diagnostico(),r.resultado(),r.observaciones(),r.tipoEstudio(),formato,r.url(),r.regionAnatomica(),estado,normalizarPrioridad(r.prioridad()),r.tecnicoResponsable(),normalizarHora(r.hora()),fechaRealizacion,r.observacionesImagenologo(),r.hallazgos(),recomendaciones(r.recomendaciones()),r.consultaId(),id);
     if (rows == 0) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Registro no encontrado.");
     return obtener(id).orElseThrow();
   }
   RegistroDto registrarResultado(Long id, RegistroRequest r) {
     String formato = normalizarFormato(r.formato());
     validarUrlArchivo(formato, r.url());
-    int rows = jdbc.update("UPDATE estudios_imagenologia SET resultado=?, observaciones_imagenologo=?, hallazgos=?, recomendaciones=?, formato=?, url=?, estado=?, tecnico_responsable=?, hora=?, fecha_realizacion=? WHERE id=?", r.resultado(), r.observacionesImagenologo(), r.hallazgos(), r.recomendaciones(), formato, r.url(), normalizarEstado(r.estado() == null ? "REALIZADO" : r.estado(), r.url(), r.resultado()), r.tecnicoResponsable(), normalizarHora(r.hora()), LocalDateTime.now().toString(), id);
+    int rows = jdbc.update("UPDATE estudios_imagenologia SET resultado=?, observaciones_imagenologo=?, hallazgos=?, recomendaciones=?, formato=?, url=?, estado=?, tecnico_responsable=?, hora=?, fecha_realizacion=? WHERE id=?", r.resultado(), r.observacionesImagenologo(), r.hallazgos(), recomendaciones(r.recomendaciones()), formato, r.url(), normalizarEstado(r.estado() == null ? "REALIZADO" : r.estado(), r.url(), r.resultado()), r.tecnicoResponsable(), normalizarHora(r.hora()), LocalDateTime.now().toString(), id);
     if (rows == 0) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Registro no encontrado.");
     return obtener(id).orElseThrow();
   }
@@ -252,6 +253,7 @@ class RegistroRepository {
     if ("DICOM".equals(formato) && !(lower.endsWith(".dcm") || lower.endsWith(".dicom") || lower.endsWith(".ima"))) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La URL del archivo DICOM debe terminar en .dcm, .dicom o .ima.");
   }
   String normalizarPrioridad(String prioridad) { return prioridad == null || prioridad.isBlank() ? "NORMAL" : prioridad.trim().toUpperCase(Locale.ROOT); }
+  String recomendaciones(String value) { return value == null || value.isBlank() ? "No registradas" : value.trim(); }
   String normalizarEstado(String estado, String url, String resultado) { return estado == null || estado.isBlank() ? ((url != null && !url.isBlank()) || (resultado != null && !resultado.isBlank()) ? "REALIZADO" : "SOLICITADO") : validarEstado(estado); }
   String validarEstado(String estado) {
     String value = estado == null ? "" : estado.trim().toUpperCase(Locale.ROOT);
@@ -264,10 +266,10 @@ class RegistroRepository {
 }
 
 class Sedes {
-  static final List<String> OFICIALES = List.of("SOLCA Cuenca", "SOLCA Quito", "SOLCA Manabí");
+  static final List<String> OFICIALES = List.of("SOLCA Cuenca", "SOLCA Quito", "SOLCA Guayaquil");
   static void validar(String sede) {
     if (sede == null || !OFICIALES.contains(sede.trim())) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sede inválida. Use SOLCA Cuenca, SOLCA Quito o SOLCA Manabí.");
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sede inválida. Use SOLCA Cuenca, SOLCA Quito o SOLCA Guayaquil.");
     }
   }
 }

@@ -50,7 +50,7 @@ class AuthController {
   LoginResponse login(@Valid @RequestBody LoginRequest request) {
     AuthUser user = repo.find(request.username());
     if (user == null || !encoder.matches(request.password(), user.passwordHash())) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Credenciales inválidas.");
-    String token = Jwts.builder().subject(user.username()).claim("role", user.role()).issuedAt(new Date()).expiration(Date.from(Instant.now().plusSeconds(28800))).signWith(Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8))).compact();
+    String token = Jwts.builder().subject(user.username()).claim("role", user.role()).claim("name", user.name()).issuedAt(new Date()).expiration(Date.from(Instant.now().plusSeconds(28800))).signWith(Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8))).compact();
     return new LoginResponse(token, new UserResponse(user.username(), user.role(), user.name()));
   }
 }

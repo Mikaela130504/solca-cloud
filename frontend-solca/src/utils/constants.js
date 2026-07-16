@@ -14,7 +14,7 @@ export const ROUTES = {
 
 export const HOSPITAL_BRANCHES = [
   "SOLCA Quito",
-  "SOLCA Manabí",
+  "SOLCA Guayaquil",
   "SOLCA Cuenca",
 ];
 

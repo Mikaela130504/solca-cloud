@@ -21,8 +21,8 @@ public class ConsultaServiceApplication {
   @Bean CommandLineRunner schema(RegistroRepository repo) { return args -> repo.schema(); }
 }
 
-record RegistroDto(Long id, String idPacienteRegional, String cedula, LocalDate fecha, String sede, String medico, String especialidad, String tipoConsulta, String diagnostico, String tratamiento, String motivo, String evolucion, String resultado, String observaciones, String antecedentesFamiliares, String antecedentesPersonales, String cirugias, String ginecoObstetricos, String medicamentosActuales, String alergias, String examenFisico, String signosVitales, String medicacion, String proximoControl) {}
-record RegistroRequest(@NotBlank String cedula, String idPacienteRegional, @NotNull LocalDate fecha, @NotBlank String sede, String medico, String especialidad, String tipoConsulta, String diagnostico, String tratamiento, String motivo, String evolucion, String resultado, String observaciones, String antecedentesFamiliares, String antecedentesPersonales, String cirugias, String ginecoObstetricos, String medicamentosActuales, String alergias, String examenFisico, String signosVitales, String medicacion, String proximoControl) {}
+record RegistroDto(Long id, String idPacienteRegional, String cedula, LocalDate fecha, String sede, String medico, String especialidad, String tipoConsulta, String diagnostico, String tratamiento, String motivo, String evolucion, String resultado, String observaciones, String antecedentesFamiliares, String antecedentesPersonales, String cirugias, String ginecoObstetricos, String medicamentosActuales, String alergias, String examenFisico, String signosVitales, String medicacion, String proximoControl, String ginecoEmbarazos, String ginecoPartos, String ginecoCesareas, String ginecoAbortos, String ginecoObservaciones, String examenGeneral, String examenCabezaCuello, String examenTorax, String examenAbdomen, String examenExtremidades, String examenNeurologico, String peso, String talla, String imc, String temperatura, String presionArterial, String frecuenciaCardiaca, String frecuenciaRespiratoria, String saturacionOxigeno) {}
+record RegistroRequest(@NotBlank String cedula, String idPacienteRegional, @NotNull LocalDate fecha, @NotBlank String sede, String medico, String especialidad, String tipoConsulta, String diagnostico, String tratamiento, String motivo, String evolucion, String resultado, String observaciones, String antecedentesFamiliares, String antecedentesPersonales, String cirugias, String ginecoObstetricos, String medicamentosActuales, String alergias, String examenFisico, String signosVitales, String medicacion, String proximoControl, String ginecoEmbarazos, String ginecoPartos, String ginecoCesareas, String ginecoAbortos, String ginecoObservaciones, String examenGeneral, String examenCabezaCuello, String examenTorax, String examenAbdomen, String examenExtremidades, String examenNeurologico, String peso, String talla, String imc, String temperatura, String presionArterial, String frecuenciaCardiaca, String frecuenciaRespiratoria, String saturacionOxigeno) {}
 
 @RestController
 @RequestMapping("/consultas")
@@ -66,9 +66,29 @@ class RegistroRepository {
     agregarColumna("consultas", "signos_vitales", "TEXT");
     agregarColumna("consultas", "medicacion", "TEXT");
     agregarColumna("consultas", "proximo_control", "TEXT");
-    jdbc.update("UPDATE consultas SET sede='SOLCA Quito' WHERE sede IS NULL OR TRIM(sede) = '' OR sede NOT IN ('SOLCA Cuenca','SOLCA Quito','SOLCA Manabí')");
+    agregarColumna("consultas", "gineco_embarazos", "TEXT");
+    agregarColumna("consultas", "gineco_partos", "TEXT");
+    agregarColumna("consultas", "gineco_cesareas", "TEXT");
+    agregarColumna("consultas", "gineco_abortos", "TEXT");
+    agregarColumna("consultas", "gineco_observaciones", "TEXT");
+    agregarColumna("consultas", "examen_general", "TEXT");
+    agregarColumna("consultas", "examen_cabeza_cuello", "TEXT");
+    agregarColumna("consultas", "examen_torax", "TEXT");
+    agregarColumna("consultas", "examen_abdomen", "TEXT");
+    agregarColumna("consultas", "examen_extremidades", "TEXT");
+    agregarColumna("consultas", "examen_neurologico", "TEXT");
+    agregarColumna("consultas", "peso", "TEXT");
+    agregarColumna("consultas", "talla", "TEXT");
+    agregarColumna("consultas", "imc", "TEXT");
+    agregarColumna("consultas", "temperatura", "TEXT");
+    agregarColumna("consultas", "presion_arterial", "TEXT");
+    agregarColumna("consultas", "frecuencia_cardiaca", "TEXT");
+    agregarColumna("consultas", "frecuencia_respiratoria", "TEXT");
+    agregarColumna("consultas", "saturacion_oxigeno", "TEXT");
+    jdbc.update("UPDATE consultas SET sede='SOLCA Quito' WHERE sede IS NULL OR TRIM(sede) = '' OR sede NOT IN ('SOLCA Cuenca','SOLCA Quito','SOLCA Guayaquil')");
     migrarRegistros("consultas");
     migrarObservacionesEstructuradas();
+    migrarCamposNormalizados();
     jdbc.execute("CREATE INDEX IF NOT EXISTS idx_consultas_paciente ON consultas(id_paciente_regional)");
     jdbc.execute("CREATE INDEX IF NOT EXISTS idx_consultas_cedula ON consultas(cedula)");
     Auditoria.crearTabla(jdbc);
@@ -83,12 +103,12 @@ class RegistroRepository {
     }
   }
   RegistroDto crear(RegistroRequest r) {
-    jdbc.update("INSERT INTO consultas(id_paciente_regional,cedula,fecha,sede,medico,especialidad,tipo_consulta,diagnostico,tratamiento,motivo,evolucion,resultado,observaciones,antecedentes_familiares,antecedentes_personales,cirugias,gineco_obstetricos,medicamentos_actuales,alergias,examen_fisico,signos_vitales,medicacion,proximo_control) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", normalizarPaciente(r),r.cedula(),r.fecha().toString(),r.sede(),r.medico(),r.especialidad(),r.tipoConsulta(),r.diagnostico(),r.tratamiento(),r.motivo(),r.evolucion(),r.resultado(),r.observaciones(),r.antecedentesFamiliares(),r.antecedentesPersonales(),r.cirugias(),r.ginecoObstetricos(),r.medicamentosActuales(),r.alergias(),r.examenFisico(),r.signosVitales(),r.medicacion(),r.proximoControl());
+    jdbc.update("INSERT INTO consultas(id_paciente_regional,cedula,fecha,sede,medico,especialidad,tipo_consulta,diagnostico,tratamiento,motivo,evolucion,resultado,observaciones,antecedentes_familiares,antecedentes_personales,cirugias,gineco_obstetricos,medicamentos_actuales,alergias,examen_fisico,signos_vitales,medicacion,proximo_control,gineco_embarazos,gineco_partos,gineco_cesareas,gineco_abortos,gineco_observaciones,examen_general,examen_cabeza_cuello,examen_torax,examen_abdomen,examen_extremidades,examen_neurologico,peso,talla,imc,temperatura,presion_arterial,frecuencia_cardiaca,frecuencia_respiratoria,saturacion_oxigeno) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", normalizarPaciente(r),r.cedula(),r.fecha().toString(),r.sede(),r.medico(),r.especialidad(),r.tipoConsulta(),r.diagnostico(),r.tratamiento(),r.motivo(),r.evolucion(),r.resultado(),r.observaciones(),r.antecedentesFamiliares(),r.antecedentesPersonales(),r.cirugias(),r.ginecoObstetricos(),r.medicamentosActuales(),r.alergias(),r.examenFisico(),r.signosVitales(),r.medicacion(),r.proximoControl(),r.ginecoEmbarazos(),r.ginecoPartos(),r.ginecoCesareas(),r.ginecoAbortos(),r.ginecoObservaciones(),r.examenGeneral(),r.examenCabezaCuello(),r.examenTorax(),r.examenAbdomen(),r.examenExtremidades(),r.examenNeurologico(),r.peso(),r.talla(),r.imc(),r.temperatura(),r.presionArterial(),r.frecuenciaCardiaca(),r.frecuenciaRespiratoria(),r.saturacionOxigeno());
     Long id = jdbc.queryForObject("SELECT last_insert_rowid()", Long.class);
     return obtener(id).orElseThrow();
   }
   RegistroDto editar(Long id, RegistroRequest r) {
-    int rows = jdbc.update("UPDATE consultas SET id_paciente_regional=?,cedula=?,fecha=?,sede=?,medico=?,especialidad=?,tipo_consulta=?,diagnostico=?,tratamiento=?,motivo=?,evolucion=?,resultado=?,observaciones=?,antecedentes_familiares=?,antecedentes_personales=?,cirugias=?,gineco_obstetricos=?,medicamentos_actuales=?,alergias=?,examen_fisico=?,signos_vitales=?,medicacion=?,proximo_control=? WHERE id=?", normalizarPaciente(r),r.cedula(),r.fecha().toString(),r.sede(),r.medico(),r.especialidad(),r.tipoConsulta(),r.diagnostico(),r.tratamiento(),r.motivo(),r.evolucion(),r.resultado(),r.observaciones(),r.antecedentesFamiliares(),r.antecedentesPersonales(),r.cirugias(),r.ginecoObstetricos(),r.medicamentosActuales(),r.alergias(),r.examenFisico(),r.signosVitales(),r.medicacion(),r.proximoControl(),id);
+    int rows = jdbc.update("UPDATE consultas SET id_paciente_regional=?,cedula=?,fecha=?,sede=?,medico=?,especialidad=?,tipo_consulta=?,diagnostico=?,tratamiento=?,motivo=?,evolucion=?,resultado=?,observaciones=?,antecedentes_familiares=?,antecedentes_personales=?,cirugias=?,gineco_obstetricos=?,medicamentos_actuales=?,alergias=?,examen_fisico=?,signos_vitales=?,medicacion=?,proximo_control=?,gineco_embarazos=?,gineco_partos=?,gineco_cesareas=?,gineco_abortos=?,gineco_observaciones=?,examen_general=?,examen_cabeza_cuello=?,examen_torax=?,examen_abdomen=?,examen_extremidades=?,examen_neurologico=?,peso=?,talla=?,imc=?,temperatura=?,presion_arterial=?,frecuencia_cardiaca=?,frecuencia_respiratoria=?,saturacion_oxigeno=? WHERE id=?", normalizarPaciente(r),r.cedula(),r.fecha().toString(),r.sede(),r.medico(),r.especialidad(),r.tipoConsulta(),r.diagnostico(),r.tratamiento(),r.motivo(),r.evolucion(),r.resultado(),r.observaciones(),r.antecedentesFamiliares(),r.antecedentesPersonales(),r.cirugias(),r.ginecoObstetricos(),r.medicamentosActuales(),r.alergias(),r.examenFisico(),r.signosVitales(),r.medicacion(),r.proximoControl(),r.ginecoEmbarazos(),r.ginecoPartos(),r.ginecoCesareas(),r.ginecoAbortos(),r.ginecoObservaciones(),r.examenGeneral(),r.examenCabezaCuello(),r.examenTorax(),r.examenAbdomen(),r.examenExtremidades(),r.examenNeurologico(),r.peso(),r.talla(),r.imc(),r.temperatura(),r.presionArterial(),r.frecuenciaCardiaca(),r.frecuenciaRespiratoria(),r.saturacionOxigeno(),id);
     if (rows == 0) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Registro no encontrado.");
     return obtener(id).orElseThrow();
   }
@@ -97,7 +117,55 @@ class RegistroRepository {
   List<RegistroDto> porPaciente(String id) { return jdbc.query("SELECT * FROM consultas WHERE id_paciente_regional=? OR cedula=? ORDER BY fecha DESC, id DESC", this::map, id, id); }
   Optional<RegistroDto> obtener(Long id) { return jdbc.query("SELECT * FROM consultas WHERE id=?", this::map, id).stream().findFirst(); }
   String normalizarPaciente(RegistroRequest r) { return r.idPacienteRegional() == null || r.idPacienteRegional().isBlank() ? r.cedula() : r.idPacienteRegional(); }
-  RegistroDto map(java.sql.ResultSet rs, int row) throws java.sql.SQLException { return new RegistroDto(rs.getLong("id"),rs.getString("id_paciente_regional"),rs.getString("cedula"),LocalDate.parse(rs.getString("fecha")),rs.getString("sede"),rs.getString("medico"),rs.getString("especialidad"),rs.getString("tipo_consulta"),rs.getString("diagnostico"),rs.getString("tratamiento"),rs.getString("motivo"),rs.getString("evolucion"),rs.getString("resultado"),rs.getString("observaciones"),rs.getString("antecedentes_familiares"),rs.getString("antecedentes_personales"),rs.getString("cirugias"),rs.getString("gineco_obstetricos"),rs.getString("medicamentos_actuales"),rs.getString("alergias"),rs.getString("examen_fisico"),rs.getString("signos_vitales"),rs.getString("medicacion"),rs.getString("proximo_control")); }
+  RegistroDto map(java.sql.ResultSet rs, int row) throws java.sql.SQLException { return new RegistroDto(rs.getLong("id"),rs.getString("id_paciente_regional"),rs.getString("cedula"),LocalDate.parse(rs.getString("fecha")),rs.getString("sede"),rs.getString("medico"),rs.getString("especialidad"),rs.getString("tipo_consulta"),rs.getString("diagnostico"),rs.getString("tratamiento"),rs.getString("motivo"),rs.getString("evolucion"),rs.getString("resultado"),rs.getString("observaciones"),rs.getString("antecedentes_familiares"),rs.getString("antecedentes_personales"),rs.getString("cirugias"),rs.getString("gineco_obstetricos"),rs.getString("medicamentos_actuales"),rs.getString("alergias"),rs.getString("examen_fisico"),rs.getString("signos_vitales"),rs.getString("medicacion"),rs.getString("proximo_control"),rs.getString("gineco_embarazos"),rs.getString("gineco_partos"),rs.getString("gineco_cesareas"),rs.getString("gineco_abortos"),rs.getString("gineco_observaciones"),rs.getString("examen_general"),rs.getString("examen_cabeza_cuello"),rs.getString("examen_torax"),rs.getString("examen_abdomen"),rs.getString("examen_extremidades"),rs.getString("examen_neurologico"),rs.getString("peso"),rs.getString("talla"),rs.getString("imc"),rs.getString("temperatura"),rs.getString("presion_arterial"),rs.getString("frecuencia_cardiaca"),rs.getString("frecuencia_respiratoria"),rs.getString("saturacion_oxigeno")); }
+
+  void migrarCamposNormalizados() {
+    for (Map<String,Object> row : jdbc.queryForList("SELECT id, gineco_obstetricos, examen_fisico, signos_vitales FROM consultas")) {
+      Long id = ((Number) row.get("id")).longValue();
+      String gineco = valor(row.get("gineco_obstetricos"));
+      String examen = valor(row.get("examen_fisico"));
+      String signos = valor(row.get("signos_vitales"));
+      jdbc.update("""
+        UPDATE consultas SET
+          gineco_embarazos=COALESCE(NULLIF(gineco_embarazos,''), ?),
+          gineco_partos=COALESCE(NULLIF(gineco_partos,''), ?),
+          gineco_cesareas=COALESCE(NULLIF(gineco_cesareas,''), ?),
+          gineco_abortos=COALESCE(NULLIF(gineco_abortos,''), ?),
+          gineco_observaciones=COALESCE(NULLIF(gineco_observaciones,''), ?),
+          examen_general=COALESCE(NULLIF(examen_general,''), ?),
+          examen_cabeza_cuello=COALESCE(NULLIF(examen_cabeza_cuello,''), ?),
+          examen_torax=COALESCE(NULLIF(examen_torax,''), ?),
+          examen_abdomen=COALESCE(NULLIF(examen_abdomen,''), ?),
+          examen_extremidades=COALESCE(NULLIF(examen_extremidades,''), ?),
+          examen_neurologico=COALESCE(NULLIF(examen_neurologico,''), ?),
+          peso=COALESCE(NULLIF(peso,''), ?),
+          talla=COALESCE(NULLIF(talla,''), ?),
+          imc=COALESCE(NULLIF(imc,''), ?),
+          temperatura=COALESCE(NULLIF(temperatura,''), ?),
+          presion_arterial=COALESCE(NULLIF(presion_arterial,''), ?),
+          frecuencia_cardiaca=COALESCE(NULLIF(frecuencia_cardiaca,''), ?),
+          frecuencia_respiratoria=COALESCE(NULLIF(frecuencia_respiratoria,''), ?),
+          saturacion_oxigeno=COALESCE(NULLIF(saturacion_oxigeno,''), ?)
+        WHERE id=?
+        """,
+        extraerValor(gineco, "Embarazos"), extraerValor(gineco, "Partos"), extraerValor(gineco, "Cesáreas"), extraerValor(gineco, "Abortos"), extraerValor(gineco, "Observaciones:"),
+        extraerValor(examen, "General:"), extraerValor(examen, "Cabeza/cuello:"), extraerValor(examen, "Tórax:"), extraerValor(examen, "Abdomen:"), extraerValor(examen, "Extremidades:"), extraerValor(examen, "Neurológico:"),
+        extraerValor(signos, "Peso"), extraerValor(signos, "Talla"), extraerValor(signos, "IMC"), extraerValor(signos, "Temperatura"), extraerValor(signos, "PA"), extraerValor(signos, "FC"), extraerValor(signos, "FR"), extraerValor(signos, "Saturación"), id);
+    }
+  }
+
+  String valor(Object value) { return value == null ? "" : String.valueOf(value); }
+
+  String extraerValor(String texto, String etiqueta) {
+    if (texto == null || texto.isBlank()) return "";
+    for (String parte : texto.split(";")) {
+      String limpia = parte.trim();
+      if (limpia.startsWith(etiqueta)) {
+        return limpia.substring(etiqueta.length()).replace("kg", "").replace("cm", "").trim();
+      }
+    }
+    return "";
+  }
 
   void migrarObservacionesEstructuradas() {
     for (Map<String,Object> row : jdbc.queryForList("SELECT id, observaciones FROM consultas WHERE observaciones IS NOT NULL AND TRIM(observaciones) <> ''")) {
@@ -171,10 +239,10 @@ class RegistroRepository {
 }
 
 class Sedes {
-  static final List<String> OFICIALES = List.of("SOLCA Cuenca", "SOLCA Quito", "SOLCA Manabí");
+  static final List<String> OFICIALES = List.of("SOLCA Cuenca", "SOLCA Quito", "SOLCA Guayaquil");
   static void validar(String sede) {
     if (sede == null || !OFICIALES.contains(sede.trim())) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sede inválida. Use SOLCA Cuenca, SOLCA Quito o SOLCA Manabí.");
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sede inválida. Use SOLCA Cuenca, SOLCA Quito o SOLCA Guayaquil.");
     }
   }
 }

@@ -164,6 +164,14 @@ export default function Consultation() {
         tratamiento: form.values.plan,
         observaciones: "",
         signosVitales,
+        peso: form.values.peso,
+        talla: form.values.talla,
+        imc: form.values.imc,
+        temperatura: form.values.temperatura,
+        presionArterial: form.values.presionArterial,
+        frecuenciaCardiaca: form.values.frecuenciaCardiaca,
+        frecuenciaRespiratoria: form.values.frecuenciaRespiratoria,
+        saturacionOxigeno: form.values.saturacion,
       });
       const requests = [];
       if (form.values.solicitaLaboratorio) {

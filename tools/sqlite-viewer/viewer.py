@@ -54,11 +54,6 @@ def query_rows(db_path, table):
             columns = rows[0].keys() if rows else [r[1] for r in conn.execute(f"PRAGMA table_info({quoted})")]
             if table == "auditorias":
                 columns = [col for col in columns if col != "id"]
-            if rows:
-                columns = [
-                    col for col in columns
-                    if any(row[col] is not None and str(row[col]).strip() != "" for row in rows)
-                ]
         return tables, table, columns, rows
 
 

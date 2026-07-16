@@ -24,6 +24,25 @@ export async function createClinicalHistory(history) {
     alergias: history.alergiasDetalle,
     examenFisico: history.examenFisico,
     signosVitales: history.signosVitales,
+    ginecoEmbarazos: history.ginecoEmbarazos,
+    ginecoPartos: history.ginecoPartos,
+    ginecoCesareas: history.ginecoCesareas,
+    ginecoAbortos: history.ginecoAbortos,
+    ginecoObservaciones: history.ginecoObservaciones,
+    examenGeneral: history.examenGeneral,
+    examenCabezaCuello: history.examenCabezaCuello,
+    examenTorax: history.examenTorax,
+    examenAbdomen: history.examenAbdomen,
+    examenExtremidades: history.examenExtremidades,
+    examenNeurologico: history.examenNeurologico,
+    peso: history.peso,
+    talla: history.talla,
+    imc: history.imc,
+    temperatura: history.temperatura,
+    presionArterial: history.presionArterial,
+    frecuenciaCardiaca: history.frecuenciaCardiaca,
+    frecuenciaRespiratoria: history.frecuenciaRespiratoria,
+    saturacionOxigeno: history.saturacionOxigeno,
   };
   const { data } = await api.post("/consultas", payload);
   return data;
@@ -46,6 +65,14 @@ export async function createConsultation(consultation) {
     signosVitales: consultation.signosVitales,
     medicacion: consultation.medicacion,
     proximoControl: consultation.proximoControl,
+    peso: consultation.peso,
+    talla: consultation.talla,
+    imc: consultation.imc,
+    temperatura: consultation.temperatura,
+    presionArterial: consultation.presionArterial,
+    frecuenciaCardiaca: consultation.frecuenciaCardiaca,
+    frecuenciaRespiratoria: consultation.frecuenciaRespiratoria,
+    saturacionOxigeno: consultation.saturacionOxigeno,
   };
   const { data } = await api.post("/consultas", payload);
   return data;
