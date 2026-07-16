@@ -177,11 +177,18 @@ class RegistroRepository {
     agregarColumna("estudios_imagenologia", "hora", "TEXT");
     agregarColumna("estudios_imagenologia", "fecha_solicitud", "TEXT");
     agregarColumna("estudios_imagenologia", "fecha_realizacion", "TEXT");
+    agregarColumna("estudios_imagenologia", "indicacion_medica", "TEXT");
+    agregarColumna("estudios_imagenologia", "conclusion_diagnostica", "TEXT");
+    jdbc.execute("CREATE TABLE IF NOT EXISTS imagenologia_informes (id INTEGER PRIMARY KEY AUTOINCREMENT, estudio_id INTEGER NOT NULL, hallazgos TEXT, conclusion_diagnostica TEXT, observaciones_imagenologo TEXT, recomendaciones TEXT, fecha_informe TEXT, FOREIGN KEY(estudio_id) REFERENCES estudios_imagenologia(id))");
+    jdbc.execute("CREATE TABLE IF NOT EXISTS imagenologia_archivos (id INTEGER PRIMARY KEY AUTOINCREMENT, estudio_id INTEGER NOT NULL, formato TEXT, url TEXT, nombre_archivo TEXT, fecha_carga TEXT, FOREIGN KEY(estudio_id) REFERENCES estudios_imagenologia(id))");
     jdbc.update("UPDATE estudios_imagenologia SET estado='REALIZADO' WHERE estado IS NULL AND url IS NOT NULL AND TRIM(url) <> ''");
     jdbc.update("UPDATE estudios_imagenologia SET estado='SOLICITADO' WHERE estado IS NULL OR TRIM(estado) = ''");
     jdbc.update("UPDATE estudios_imagenologia SET recomendaciones='No registradas' WHERE recomendaciones IS NULL OR TRIM(recomendaciones) = ''");
+    jdbc.update("UPDATE estudios_imagenologia SET indicacion_medica=observaciones WHERE (indicacion_medica IS NULL OR TRIM(indicacion_medica) = '') AND observaciones IS NOT NULL");
+    jdbc.update("UPDATE estudios_imagenologia SET conclusion_diagnostica=resultado WHERE (conclusion_diagnostica IS NULL OR TRIM(conclusion_diagnostica) = '') AND resultado IS NOT NULL");
     jdbc.update("UPDATE estudios_imagenologia SET fecha_solicitud=? WHERE fecha_solicitud IS NULL OR TRIM(fecha_solicitud) = ''", LocalDateTime.now().toString());
     migrarRegistros("estudios_imagenologia");
+    reconstruirInformesArchivos();
     jdbc.execute("CREATE INDEX IF NOT EXISTS idx_estudios_imagenologia_paciente ON estudios_imagenologia(id_paciente_regional)");
     jdbc.execute("CREATE INDEX IF NOT EXISTS idx_estudios_imagenologia_cedula ON estudios_imagenologia(cedula)");
     jdbc.execute("CREATE INDEX IF NOT EXISTS idx_estudios_imagenologia_estado ON estudios_imagenologia(estado)");
@@ -205,6 +212,8 @@ class RegistroRepository {
     String fechaRealizacion = "REALIZADO".equals(estado) || "INFORMADO".equals(estado) ? LocalDateTime.now().toString() : null;
     jdbc.update("INSERT INTO estudios_imagenologia(id_paciente_regional,cedula,fecha,sede,medico,especialidad,tipo_consulta,diagnostico,resultado,observaciones,tipo_estudio,formato,url,region_anatomica,estado,prioridad,tecnico_responsable,hora,fecha_solicitud,fecha_realizacion,observaciones_imagenologo,hallazgos,recomendaciones,consulta_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", normalizarPaciente(r),r.cedula(),r.fecha().toString(),r.sede(),r.medico(),r.especialidad(),r.tipoConsulta(),r.diagnostico(),r.resultado(),r.observaciones(),r.tipoEstudio(),formato,r.url(),r.regionAnatomica(),estado,normalizarPrioridad(r.prioridad()),r.tecnicoResponsable(),normalizarHora(r.hora()),LocalDateTime.now().toString(),fechaRealizacion,r.observacionesImagenologo(),r.hallazgos(),recomendaciones(r.recomendaciones()),r.consultaId());
     Long id = jdbc.queryForObject("SELECT last_insert_rowid()", Long.class);
+    jdbc.update("UPDATE estudios_imagenologia SET indicacion_medica=?, conclusion_diagnostica=? WHERE id=?", r.observaciones(), r.resultado(), id);
+    reconstruirInformesArchivos(id);
     return obtener(id).orElseThrow();
   }
   RegistroDto editar(Long id, RegistroRequest r) {
@@ -214,6 +223,8 @@ class RegistroRepository {
     String fechaRealizacion = "REALIZADO".equals(estado) || "INFORMADO".equals(estado) ? LocalDateTime.now().toString() : null;
     int rows = jdbc.update("UPDATE estudios_imagenologia SET id_paciente_regional=?,cedula=?,fecha=?,sede=?,medico=?,especialidad=?,tipo_consulta=?,diagnostico=?,resultado=?,observaciones=?,tipo_estudio=?,formato=?,url=?,region_anatomica=?,estado=?,prioridad=?,tecnico_responsable=?,hora=?,fecha_realizacion=COALESCE(?,fecha_realizacion),observaciones_imagenologo=?,hallazgos=?,recomendaciones=?,consulta_id=? WHERE id=?", normalizarPaciente(r),r.cedula(),r.fecha().toString(),r.sede(),r.medico(),r.especialidad(),r.tipoConsulta(),r.diagnostico(),r.resultado(),r.observaciones(),r.tipoEstudio(),formato,r.url(),r.regionAnatomica(),estado,normalizarPrioridad(r.prioridad()),r.tecnicoResponsable(),normalizarHora(r.hora()),fechaRealizacion,r.observacionesImagenologo(),r.hallazgos(),recomendaciones(r.recomendaciones()),r.consultaId(),id);
     if (rows == 0) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Registro no encontrado.");
+    jdbc.update("UPDATE estudios_imagenologia SET indicacion_medica=?, conclusion_diagnostica=? WHERE id=?", r.observaciones(), r.resultado(), id);
+    reconstruirInformesArchivos(id);
     return obtener(id).orElseThrow();
   }
   RegistroDto registrarResultado(Long id, RegistroRequest r) {
@@ -221,6 +232,8 @@ class RegistroRepository {
     validarUrlArchivo(formato, r.url());
     int rows = jdbc.update("UPDATE estudios_imagenologia SET resultado=?, observaciones_imagenologo=?, hallazgos=?, recomendaciones=?, formato=?, url=?, estado=?, tecnico_responsable=?, hora=?, fecha_realizacion=? WHERE id=?", r.resultado(), r.observacionesImagenologo(), r.hallazgos(), recomendaciones(r.recomendaciones()), formato, r.url(), normalizarEstado(r.estado() == null ? "REALIZADO" : r.estado(), r.url(), r.resultado()), r.tecnicoResponsable(), normalizarHora(r.hora()), LocalDateTime.now().toString(), id);
     if (rows == 0) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Registro no encontrado.");
+    jdbc.update("UPDATE estudios_imagenologia SET conclusion_diagnostica=? WHERE id=?", r.resultado(), id);
+    reconstruirInformesArchivos(id);
     return obtener(id).orElseThrow();
   }
   RegistroDto cambiarEstado(Long id, String estado) {
@@ -263,6 +276,37 @@ class RegistroRepository {
   LocalDateTime parseDateTime(String value) { return value == null || value.isBlank() ? null : LocalDateTime.parse(value); }
   LocalTime parseTime(String value) { return value == null || value.isBlank() ? null : LocalTime.parse(value); }
   RegistroDto map(java.sql.ResultSet rs, int row) throws java.sql.SQLException { return new RegistroDto(rs.getLong("id"),rs.getString("id_paciente_regional"),rs.getString("cedula"),LocalDate.parse(rs.getString("fecha")),rs.getString("sede"),rs.getString("medico"),rs.getString("especialidad"),rs.getString("tipo_consulta"),rs.getString("diagnostico"),rs.getString("resultado"),rs.getString("observaciones"),rs.getString("tipo_estudio"),rs.getString("formato"),rs.getString("url"),rs.getString("region_anatomica"),rs.getString("estado"),rs.getString("prioridad"),rs.getString("tecnico_responsable"),parseTime(rs.getString("hora")),parseDateTime(rs.getString("fecha_solicitud")),parseDateTime(rs.getString("fecha_realizacion")),rs.getString("observaciones_imagenologo"),rs.getString("hallazgos"),rs.getString("recomendaciones"),rs.getObject("consulta_id") == null ? null : rs.getLong("consulta_id")); }
+
+  void reconstruirInformesArchivos() {
+    for (Map<String,Object> row : jdbc.queryForList("SELECT id FROM estudios_imagenologia")) {
+      reconstruirInformesArchivos(((Number) row.get("id")).longValue());
+    }
+  }
+
+  void reconstruirInformesArchivos(Long estudioId) {
+    Map<String,Object> row = jdbc.queryForList("SELECT * FROM estudios_imagenologia WHERE id=?", estudioId).stream().findFirst().orElse(Map.of());
+    if (row.isEmpty()) return;
+    jdbc.update("DELETE FROM imagenologia_informes WHERE estudio_id=?", estudioId);
+    jdbc.update("DELETE FROM imagenologia_archivos WHERE estudio_id=?", estudioId);
+    String hallazgos = value(row.get("hallazgos"));
+    String conclusion = first(value(row.get("conclusion_diagnostica")), value(row.get("resultado")));
+    String obs = value(row.get("observaciones_imagenologo"));
+    String recomendaciones = value(row.get("recomendaciones"));
+    if (!hallazgos.isBlank() || !conclusion.isBlank() || !obs.isBlank() || !recomendaciones.isBlank()) {
+      jdbc.update("INSERT INTO imagenologia_informes(estudio_id,hallazgos,conclusion_diagnostica,observaciones_imagenologo,recomendaciones,fecha_informe) VALUES (?,?,?,?,?,?)", estudioId, hallazgos, conclusion, obs, recomendaciones, value(row.get("fecha_realizacion")));
+    }
+    String url = value(row.get("url"));
+    if (!url.isBlank()) {
+      String nombre = Paths.get(url).getFileName().toString();
+      jdbc.update("INSERT INTO imagenologia_archivos(estudio_id,formato,url,nombre_archivo,fecha_carga) VALUES (?,?,?,?,?)", estudioId, value(row.get("formato")), url, nombre, value(row.get("fecha_realizacion")));
+    }
+  }
+
+  String value(Object value) { return value == null ? "" : String.valueOf(value).trim(); }
+  String first(String... values) {
+    for (String value : values) if (value != null && !value.isBlank()) return value;
+    return "";
+  }
 }
 
 class Sedes {

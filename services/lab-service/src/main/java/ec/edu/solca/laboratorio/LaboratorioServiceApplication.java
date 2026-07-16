@@ -80,11 +80,13 @@ class RegistroRepository {
     agregarColumna("resultados_laboratorio", "usuario_valido", "TEXT");
     agregarColumna("resultados_laboratorio", "observaciones_laboratorio", "TEXT");
     agregarColumna("resultados_laboratorio", "consulta_id", "INTEGER");
+    jdbc.execute("CREATE TABLE IF NOT EXISTS laboratorio_parametros (id INTEGER PRIMARY KEY AUTOINCREMENT, laboratorio_id INTEGER NOT NULL, parametro TEXT NOT NULL, valor_obtenido TEXT, unidad TEXT, valor_referencia_min TEXT, valor_referencia_max TEXT, indicador TEXT, FOREIGN KEY(laboratorio_id) REFERENCES resultados_laboratorio(id))");
     jdbc.update("UPDATE resultados_laboratorio SET estado='FINALIZADO' WHERE estado IS NULL AND resultado IS NOT NULL AND TRIM(resultado) <> ''");
     jdbc.update("UPDATE resultados_laboratorio SET estado='FINALIZADO' WHERE estado='VALIDADO'");
     jdbc.update("UPDATE resultados_laboratorio SET estado='PENDIENTE' WHERE estado IS NULL OR TRIM(estado) = ''");
     jdbc.update("UPDATE resultados_laboratorio SET fecha_solicitud=? WHERE fecha_solicitud IS NULL OR TRIM(fecha_solicitud) = ''", LocalDateTime.now().toString());
     migrarRegistros("resultados_laboratorio");
+    reconstruirParametros();
     jdbc.execute("CREATE INDEX IF NOT EXISTS idx_resultados_laboratorio_paciente ON resultados_laboratorio(id_paciente_regional)");
     jdbc.execute("CREATE INDEX IF NOT EXISTS idx_resultados_laboratorio_cedula ON resultados_laboratorio(cedula)");
     jdbc.execute("CREATE INDEX IF NOT EXISTS idx_resultados_laboratorio_estado ON resultados_laboratorio(estado)");
@@ -106,6 +108,7 @@ class RegistroRepository {
     String fechaResultado = "FINALIZADO".equals(estado) ? LocalDateTime.now().toString() : null;
     jdbc.update("INSERT INTO resultados_laboratorio(id_paciente_regional,cedula,fecha,sede,medico,especialidad,tipo_consulta,diagnostico,tratamiento,motivo,evolucion,tipo_examen,resultado,observaciones,estado,prioridad,tecnologo_responsable,fecha_solicitud,fecha_resultado,valores,unidad,valor_referencia,interpretacion,codigo_muestra,tipo_resultado,resultado_critico,hora_resultado,fecha_validacion,usuario_valido,consulta_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", normalizarPaciente(r),r.cedula(),r.fecha().toString(),r.sede(),r.medico(),r.especialidad(),r.tipoConsulta(),r.diagnostico(),r.tratamiento(),r.motivo(),r.evolucion(),r.tipoExamen(),r.resultado(),r.observaciones(),estado,normalizarPrioridad(r.prioridad()),r.tecnologoResponsable(),LocalDateTime.now().toString(),fechaResultado,r.valores(),r.unidad(),r.valorReferencia(),r.interpretacion(),codigoMuestra(r),r.tipoResultado(),critico(r),fechaResultado == null ? null : LocalTime.now().toString().substring(0,5),fechaResultado,"FINALIZADO".equals(estado) ? usuarioActual() : null,r.consultaId());
     Long id = jdbc.queryForObject("SELECT last_insert_rowid()", Long.class);
+    reconstruirParametros(id);
     return obtener(id).orElseThrow();
   }
   RegistroDto editar(Long id, RegistroRequest r) {
@@ -113,12 +116,14 @@ class RegistroRepository {
     String fechaResultado = "FINALIZADO".equals(estado) ? LocalDateTime.now().toString() : null;
     int rows = jdbc.update("UPDATE resultados_laboratorio SET id_paciente_regional=?,cedula=?,fecha=?,sede=?,medico=?,especialidad=?,tipo_consulta=?,diagnostico=?,tratamiento=?,motivo=?,evolucion=?,tipo_examen=?,resultado=?,observaciones=?,estado=?,prioridad=?,tecnologo_responsable=?,fecha_resultado=COALESCE(?,fecha_resultado),valores=?,unidad=?,valor_referencia=?,interpretacion=?,codigo_muestra=?,tipo_resultado=?,resultado_critico=?,hora_resultado=COALESCE(?,hora_resultado),fecha_validacion=COALESCE(?,fecha_validacion),usuario_valido=COALESCE(?,usuario_valido),consulta_id=? WHERE id=?", normalizarPaciente(r),r.cedula(),r.fecha().toString(),r.sede(),r.medico(),r.especialidad(),r.tipoConsulta(),r.diagnostico(),r.tratamiento(),r.motivo(),r.evolucion(),r.tipoExamen(),r.resultado(),r.observaciones(),estado,normalizarPrioridad(r.prioridad()),r.tecnologoResponsable(),fechaResultado,r.valores(),r.unidad(),r.valorReferencia(),r.interpretacion(),codigoMuestra(r),r.tipoResultado(),critico(r),fechaResultado == null ? null : LocalTime.now().toString().substring(0,5),fechaResultado,"FINALIZADO".equals(estado) || "VALIDADO".equals(estado) ? usuarioActual() : null,r.consultaId(),id);
     if (rows == 0) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Registro no encontrado.");
+    reconstruirParametros(id);
     return obtener(id).orElseThrow();
   }
   RegistroDto registrarResultado(Long id, RegistroRequest r) {
     LocalDateTime ahora = LocalDateTime.now();
     int rows = jdbc.update("UPDATE resultados_laboratorio SET resultado=?, estado='FINALIZADO', tecnologo_responsable=?, fecha_resultado=?, valores=?, unidad=?, valor_referencia=?, interpretacion=?, codigo_muestra=?, tipo_resultado=?, resultado_critico=?, hora_resultado=?, fecha_validacion=?, usuario_valido=?, observaciones_laboratorio=? WHERE id=?", r.resultado(), r.tecnologoResponsable(), ahora.toString(), r.valores(), r.unidad(), r.valorReferencia(), r.interpretacion(), codigoMuestra(r), r.tipoResultado(), critico(r), LocalTime.now().toString().substring(0,5), ahora.toString(), usuarioActual(), r.observacionesLaboratorio(), id);
     if (rows == 0) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Registro no encontrado.");
+    reconstruirParametros(id);
     return obtener(id).orElseThrow();
   }
   RegistroDto cambiarEstado(Long id, String estado) {
@@ -151,6 +156,43 @@ class RegistroRepository {
   LocalDateTime parseDateTime(String value) { return value == null || value.isBlank() ? null : LocalDateTime.parse(value); }
   LocalTime parseTime(String value) { return value == null || value.isBlank() ? null : LocalTime.parse(value); }
   RegistroDto map(java.sql.ResultSet rs, int row) throws java.sql.SQLException { return new RegistroDto(rs.getLong("id"),rs.getString("id_paciente_regional"),rs.getString("cedula"),LocalDate.parse(rs.getString("fecha")),rs.getString("sede"),rs.getString("medico"),rs.getString("especialidad"),rs.getString("tipo_consulta"),rs.getString("diagnostico"),rs.getString("tratamiento"),rs.getString("motivo"),rs.getString("evolucion"),rs.getString("tipo_examen"),rs.getString("resultado"),rs.getString("observaciones"),rs.getString("estado"),rs.getString("prioridad"),rs.getString("tecnologo_responsable"),parseDateTime(rs.getString("fecha_solicitud")),parseDateTime(rs.getString("fecha_resultado")),rs.getString("valores"),rs.getString("unidad"),rs.getString("valor_referencia"),rs.getString("interpretacion"),rs.getString("codigo_muestra"),rs.getString("tipo_resultado"),rs.getInt("resultado_critico") == 1,parseTime(rs.getString("hora_resultado")),parseDateTime(rs.getString("fecha_validacion")),rs.getString("usuario_valido"),rs.getString("observaciones_laboratorio"),rs.getObject("consulta_id") == null ? null : rs.getLong("consulta_id")); }
+
+  void reconstruirParametros() {
+    for (Map<String,Object> row : jdbc.queryForList("SELECT id FROM resultados_laboratorio")) {
+      reconstruirParametros(((Number) row.get("id")).longValue());
+    }
+  }
+
+  void reconstruirParametros(Long laboratorioId) {
+    Map<String,Object> row = jdbc.queryForList("SELECT valores, unidad, valor_referencia FROM resultados_laboratorio WHERE id=?", laboratorioId).stream().findFirst().orElse(Map.of());
+    jdbc.update("DELETE FROM laboratorio_parametros WHERE laboratorio_id=?", laboratorioId);
+    String valores = row.get("valores") == null ? "" : String.valueOf(row.get("valores"));
+    if (valores.isBlank()) return;
+    if (valores.trim().startsWith("[")) {
+      java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("\\{([^}]*)\\}").matcher(valores);
+      while (matcher.find()) {
+        String object = matcher.group(1);
+        String parametro = jsonValue(object, "name");
+        if (parametro.isBlank()) parametro = jsonValue(object, "parametro");
+        String unidad = jsonValue(object, "unit");
+        String min = jsonValue(object, "min");
+        String max = jsonValue(object, "max");
+        String valor = jsonValue(object, "value");
+        String indicador = jsonValue(object, "indicator");
+        if (!parametro.isBlank()) {
+          jdbc.update("INSERT INTO laboratorio_parametros(laboratorio_id,parametro,valor_obtenido,unidad,valor_referencia_min,valor_referencia_max,indicador) VALUES (?,?,?,?,?,?,?)", laboratorioId, parametro, valor, unidad, min, max, indicador);
+        }
+      }
+      return;
+    }
+    jdbc.update("INSERT INTO laboratorio_parametros(laboratorio_id,parametro,valor_obtenido,unidad,valor_referencia_min,valor_referencia_max,indicador) VALUES (?,?,?,?,?,?,?)", laboratorioId, "Resultado general", valores, row.get("unidad"), "", row.get("valor_referencia"), "");
+  }
+
+  String jsonValue(String object, String key) {
+    java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("\"" + key + "\"\\s*:\\s*(\"([^\"]*)\"|([^,]+))").matcher(object);
+    if (!matcher.find()) return "";
+    return matcher.group(2) != null ? matcher.group(2).trim() : matcher.group(3).replace("\"", "").trim();
+  }
 }
 
 class Sedes {

@@ -63,7 +63,6 @@ export async function saveLaboratoryResult(id, result) {
     prioridad: result.prioridad,
     tecnologoResponsable: result.tecnologoResponsable,
     codigoMuestra: result.codigoMuestra,
-    tipoResultado: result.tipoResultado,
     resultadoCritico: result.resultadoCritico,
     valores: result.valores,
     unidad: result.unidad,
