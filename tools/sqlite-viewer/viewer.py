@@ -40,7 +40,7 @@ def safe_db(name):
     return db_files()[0] if db_files() else None
 
 
-def query_rows(db_path, table):
+def query_rows(db_path, table, type_filter=""):
     with sqlite3.connect(db_path) as conn:
         conn.row_factory = sqlite3.Row
         tables = visible_tables(conn)
@@ -50,11 +50,37 @@ def query_rows(db_path, table):
         columns = []
         if table:
             quoted = '"' + table.replace('"', '""') + '"'
-            rows = conn.execute(f"SELECT * FROM {quoted} LIMIT 200").fetchall()
+            params = []
+            where = ""
+            if table == "repositorio_clinico" and type_filter:
+                where = " WHERE tipo_registro=?"
+                params.append(type_filter)
+            order = " ORDER BY id DESC" if table == "repositorio_clinico" else ""
+            rows = conn.execute(f"SELECT * FROM {quoted}{where}{order} LIMIT 200", params).fetchall()
             columns = rows[0].keys() if rows else [r[1] for r in conn.execute(f"PRAGMA table_info({quoted})")]
             if table == "auditorias":
                 columns = [col for col in columns if col != "id"]
+            if table == "repositorio_clinico" and rows:
+                fixed = {"id", "tipo_registro", "id_paciente_regional"}
+                columns = [
+                    col for col in columns
+                    if col in fixed or any(row[col] not in (None, "") for row in rows)
+                ]
         return tables, table, columns, rows
+
+
+def repository_types(db_path, table):
+    if table != "repositorio_clinico":
+        return []
+    with sqlite3.connect(db_path) as conn:
+        return [
+            r[0]
+            for r in conn.execute(
+                "SELECT DISTINCT tipo_registro FROM repositorio_clinico "
+                "WHERE tipo_registro IS NOT NULL AND TRIM(tipo_registro) <> '' "
+                "ORDER BY tipo_registro"
+            )
+        ]
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -65,9 +91,20 @@ class Handler(BaseHTTPRequestHandler):
         if not db_path:
             self.respond("<h1>SOLCA SQLite Viewer</h1><p>No hay bases SQLite montadas en /data.</p>")
             return
-        tables, table, columns, rows = query_rows(db_path, params.get("table", [""])[0])
+        type_filter = params.get("tipo", [""])[0]
+        tables, table, columns, rows = query_rows(db_path, params.get("table", [""])[0], type_filter)
+        types = repository_types(db_path, table)
         db_links = " ".join(f'<a class="pill" href="/?db={escape(p.name)}">{escape(p.name)}</a>' for p in db_files())
         table_links = " ".join(f'<a class="pill" href="/?db={escape(db_path.name)}&table={escape(t)}">{escape(t)}</a>' for t in tables)
+        type_links = ""
+        if types:
+            current = escape(type_filter or "TODOS")
+            links = [f'<a class="pill" href="/?db={escape(db_path.name)}&table={escape(table)}">TODOS</a>']
+            links.extend(
+                f'<a class="pill" href="/?db={escape(db_path.name)}&table={escape(table)}&tipo={escape(t)}">{escape(t)}</a>'
+                for t in types
+            )
+            type_links = f'<section><h2>Filtro tipo_registro: {current}</h2>{" ".join(links)}</section>'
         header = "".join(f"<th>{escape(str(col))}</th>" for col in columns)
         body = "".join(
             "<tr>" + "".join(f"<td>{escape(str(row[col]) if row[col] is not None else '')}</td>" for col in columns) + "</tr>"
@@ -77,9 +114,10 @@ class Handler(BaseHTTPRequestHandler):
         <h1>SOLCA SQLite Viewer</h1>
         <section><h2>Bases</h2>{db_links}</section>
         <section><h2>Tablas de {escape(db_path.name)}</h2>{table_links or '<p>Sin tablas.</p>'}</section>
+        {type_links}
         <section><h2>{escape(table or 'Sin tabla')}</h2>
           <div class="table-wrap"><table><thead><tr>{header}</tr></thead><tbody>{body}</tbody></table></div>
-          <p>Se muestran máximo 200 registros.</p>
+          <p>Se muestran máximo 200 registros. En repositorio_clinico se ocultan columnas totalmente vacías para evitar espacios en blanco.</p>
         </section>
         """
         self.respond(html)

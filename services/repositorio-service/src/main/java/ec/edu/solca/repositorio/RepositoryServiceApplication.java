@@ -32,6 +32,7 @@ class RepositorioController {
   @GetMapping("/auditorias") @PreAuthorize("hasRole('ADMIN')") List<Map<String,Object>> auditorias(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorization) { return service.auditorias(authorization); }
   @GetMapping("/estado-servicios") @PreAuthorize("hasRole('ADMIN')") List<Map<String,Object>> estadoServicios() { return service.estadoServicios(); }
   @GetMapping("/logs-integracion") @PreAuthorize("hasRole('ADMIN')") List<Map<String,Object>> logsIntegracion() { return service.logsIntegracion(); }
+  @PostMapping("/sincronizar") @PreAuthorize("hasRole('ADMIN')") Map<String,Object> sincronizar(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorization, HttpServletRequest http) { return service.sincronizarTodos(authorization, http); }
 }
 
 @RestController
@@ -122,6 +123,39 @@ class RepositorioService {
     respuesta.put("imagenes", base.get("imagenologia"));
     respuesta.put("serviciosNoDisponibles", base.get("serviciosNoDisponibles"));
     return respuesta;
+  }
+
+  Map<String,Object> sincronizarTodos(String authorization, HttpServletRequest http) {
+    List<Map<String,Object>> pacientesRegional = pacientesRegionales(authorization);
+    List<String> sincronizados = new ArrayList<>();
+    List<String> errores = new ArrayList<>();
+    for (Map<String,Object> paciente : pacientesRegional) {
+      String idRegional = valor(paciente, "idPacienteRegional");
+      if (idRegional.isBlank()) continue;
+      try {
+        consultar(idRegional, authorization, http);
+        sincronizados.add(idRegional);
+      } catch (Exception ex) {
+        errores.add(idRegional + ": " + ex.getMessage());
+      }
+    }
+    Map<String,Object> salida = new LinkedHashMap<>();
+    salida.put("totalPacientes", pacientesRegional.size());
+    salida.put("sincronizados", sincronizados.size());
+    salida.put("idsSincronizados", sincronizados);
+    salida.put("errores", errores);
+    return salida;
+  }
+
+  List<Map<String,Object>> pacientesRegionales(String authorization) {
+    Object body = rest.get().uri(pacientes + "/pacientes").header(HttpHeaders.AUTHORIZATION, authorization).retrieve().body(Object.class);
+    if (!(body instanceof List<?> list)) return List.of();
+    List<Map<String,Object>> salida = new ArrayList<>();
+    for (Object item : list) {
+      Map<String,Object> row = comoMapa(item);
+      if (!row.isEmpty()) salida.add(row);
+    }
+    return salida;
   }
 
   Object llamar(String url, String authorization, List<String> noDisponibles, String nombre, Object fallback) {
