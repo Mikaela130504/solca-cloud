@@ -92,7 +92,10 @@ class Handler(BaseHTTPRequestHandler):
             self.respond("<h1>SOLCA SQLite Viewer</h1><p>No hay bases SQLite montadas en /data.</p>")
             return
         type_filter = params.get("tipo", [""])[0]
-        tables, table, columns, rows = query_rows(db_path, params.get("table", [""])[0], type_filter)
+        requested_table = params.get("table", [""])[0]
+        if db_path.name == "RepositorioClinico.sqlite" and requested_table in ("", "repositorio_clinico") and not type_filter:
+            type_filter = "PACIENTE"
+        tables, table, columns, rows = query_rows(db_path, requested_table, type_filter)
         types = repository_types(db_path, table)
         db_links = " ".join(f'<a class="pill" href="/?db={escape(p.name)}">{escape(p.name)}</a>' for p in db_files())
         table_links = " ".join(f'<a class="pill" href="/?db={escape(db_path.name)}&table={escape(t)}">{escape(t)}</a>' for t in tables)
